@@ -4,13 +4,20 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
+<<<<<<< HEAD
+import { Card } from "@/components/ui/card";
+=======
 import { Card, Badge } from "@/components/ui/card";
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Icons } from "@/components/ui/icons";
 import { useProfile } from "@/hooks/useProfile";
 import { useSession } from "@/context/SessionContext";
+<<<<<<< HEAD
+=======
 import { usersApi } from "@/src/services/api/users.api";
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
   return (
@@ -18,13 +25,22 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void 
       role="switch"
       aria-checked={checked}
       onClick={onChange}
+<<<<<<< HEAD
+      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+=======
       className={`relative h-6 w-11 shrink-0 rounded-full transition-colors focus:outline-none ${
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
         checked ? "bg-teal-500" : "bg-ink-200 dark:bg-ink-700"
       }`}
     >
       <span
+<<<<<<< HEAD
+        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+          checked ? "translate-x-5" : "translate-x-0.5"
+=======
         className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
           checked ? "translate-x-5" : "translate-x-0"
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
         }`}
       />
     </button>
@@ -37,14 +53,20 @@ function SettingsRow({
   sublabel,
   right,
   href,
+<<<<<<< HEAD
+=======
   onClick,
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
 }: {
   icon: (p?: any) => React.ReactNode;
   label: string;
   sublabel?: string;
   right?: React.ReactNode;
   href?: string;
+<<<<<<< HEAD
+=======
   onClick?: () => void;
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
 }) {
   const content = (
     <div className="flex items-center justify-between gap-3 px-5 py-3.5">
@@ -52,7 +74,11 @@ function SettingsRow({
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-ink-100 text-ink-500 dark:bg-ink-800 dark:text-ink-300">
           <Icon width={16} height={16} />
         </div>
+<<<<<<< HEAD
+        <div>
+=======
         <div className="text-left">
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
           <p className="text-sm font-medium text-ink-800 dark:text-ink-100">{label}</p>
           {sublabel && <p className="text-xs text-ink-400">{sublabel}</p>}
         </div>
@@ -65,6 +91,15 @@ function SettingsRow({
     </div>
   );
 
+<<<<<<< HEAD
+  return href ? (
+    <Link href={href} className="block transition-colors hover:bg-ink-50/60 dark:hover:bg-ink-800/40">
+      {content}
+    </Link>
+  ) : (
+    <div>{content}</div>
+  );
+=======
   if (href) {
     return (
       <Link href={href} className="block transition-colors hover:bg-ink-50/60 dark:hover:bg-ink-800/40">
@@ -86,6 +121,7 @@ function SettingsRow({
   }
 
   return <div>{content}</div>;
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
 }
 
 export default function SettingsPage() {
@@ -102,6 +138,8 @@ export default function SettingsPage() {
   const [promotions, setPromotions] = useState(false);
   const [rideReminders, setRideReminders] = useState(true);
 
+<<<<<<< HEAD
+=======
   // Modal states
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showSessionModal, setShowSessionModal] = useState(false);
@@ -117,6 +155,7 @@ export default function SettingsPage() {
   // Device info states
   const [deviceInfo, setDeviceInfo] = useState("Unknown Device");
 
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
   // Sync state with fetched profile data
   useEffect(() => {
     if (profile) {
@@ -126,6 +165,8 @@ export default function SettingsPage() {
     }
   }, [profile]);
 
+<<<<<<< HEAD
+=======
   useEffect(() => {
     if (typeof window !== "undefined") {
       const ua = window.navigator.userAgent;
@@ -147,6 +188,7 @@ export default function SettingsPage() {
     }
   }, []);
 
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const nameParts = name.trim().split(" ");
@@ -174,6 +216,8 @@ export default function SettingsPage() {
     }
   };
 
+<<<<<<< HEAD
+=======
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     setPwdError("");
@@ -210,6 +254,7 @@ export default function SettingsPage() {
     }
   };
 
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
   return (
     <AppShell title="Settings">
       <div className="mx-auto flex max-w-xl flex-col gap-6">
@@ -290,6 +335,10 @@ export default function SettingsPage() {
         <Card className="overflow-hidden">
           <p className="px-5 pt-4 text-xs font-semibold uppercase tracking-wide text-ink-400">Security</p>
           <div className="divide-y divide-ink-50 dark:divide-ink-800">
+<<<<<<< HEAD
+            <SettingsRow icon={Icons.lock} label="Change Password" sublabel="Update your login password" />
+            <SettingsRow icon={Icons.users} label="Login Sessions" sublabel="Manage active devices" />
+=======
             <SettingsRow
               icon={Icons.lock}
               label="Change Password"
@@ -302,6 +351,7 @@ export default function SettingsPage() {
               sublabel="Manage active devices"
               onClick={() => setShowSessionModal(true)}
             />
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
           </div>
         </Card>
 
@@ -316,6 +366,8 @@ export default function SettingsPage() {
 
         <Button variant="danger" className="w-full" onClick={handleLogout}>Log Out</Button>
       </div>
+<<<<<<< HEAD
+=======
 
       {/* Change Password Modal */}
       {showPasswordModal && (
@@ -440,6 +492,7 @@ export default function SettingsPage() {
           </Card>
         </div>
       )}
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
     </AppShell>
   );
 }
