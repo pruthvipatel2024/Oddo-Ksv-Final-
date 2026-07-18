@@ -21,9 +21,8 @@ export function middleware(request: NextRequest) {
 
   // 1. Handle Guest paths (login, signup)
   const isAuthRoute = 
-    pathname.startsWith('/auth/login') ||
-    pathname.startsWith('/auth/register') ||
-    pathname.startsWith('/auth/organization-code') ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/signup') ||
     pathname.startsWith('/admin/login');
 
   let userRole: string | null = null;
@@ -42,7 +41,7 @@ export function middleware(request: NextRequest) {
       if (userRole === 'EMPLOYEE') {
         return NextResponse.redirect(new URL('/dashboard', request.url));
       } else {
-        return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+        return NextResponse.redirect(new URL('/admin/employees', request.url));
       }
     }
     return NextResponse.next();
@@ -51,16 +50,16 @@ export function middleware(request: NextRequest) {
   // 2. Handle Protected Employee paths
   if (pathname.startsWith('/dashboard')) {
     if (!token) {
-      return NextResponse.redirect(new URL('/auth/login', request.url));
+      return NextResponse.redirect(new URL('/login', request.url));
     }
     if (userRole !== 'EMPLOYEE') {
-      return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+      return NextResponse.redirect(new URL('/admin/employees', request.url));
     }
     return NextResponse.next();
   }
 
   // 3. Handle Protected Admin paths
-  if (pathname.startsWith('/admin/dashboard')) {
+  if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
     if (!token) {
       return NextResponse.redirect(new URL('/admin/login', request.url));
     }
@@ -76,10 +75,10 @@ export function middleware(request: NextRequest) {
       if (userRole === 'EMPLOYEE') {
         return NextResponse.redirect(new URL('/dashboard', request.url));
       } else {
-        return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+        return NextResponse.redirect(new URL('/admin/employees', request.url));
       }
     }
-    return NextResponse.redirect(new URL('/auth/login', request.url));
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
   return NextResponse.next();
