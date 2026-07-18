@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+frontend/node_modules/
+
+# testing
+coverage/
+
+# next.js
+.next/
+frontend/.next/
+
+# production
+build/
+out/
+
+# typescript
+*.tsbuildinfo
+frontend/tsconfig.tsbuildinfo
+
+# env files
+.env*
+
+# OS files
+.DS_Store
+Thumbs.db
