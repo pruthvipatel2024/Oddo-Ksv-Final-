@@ -30,12 +30,14 @@ const parseAndValidateURL = (name: string, value: string | undefined, expectedPr
 
 // Validate variables and export typed configuration object
 const validateEnv = () => {
-  // Access variables statically so Next.js compiler can inline them for the browser build
-  const rawApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-  const rawWsUrl = process.env.NEXT_PUBLIC_WS_URL;
-  const googleMapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || '';
-  const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+  const rawApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
+  const rawWsUrl = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:5000';
+  const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_sandbox_key';
   
+  const mapTileUrl = process.env.NEXT_PUBLIC_MAP_TILE_URL || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+  const nominatimUrl = process.env.NEXT_PUBLIC_NOMINATIM_URL || 'https://nominatim.openstreetmap.org/search';
+  const osrmUrl = process.env.NEXT_PUBLIC_OSRM_URL || 'https://router.project-osrm.org';
+
   const nodeEnv = process.env.NODE_ENV || 'development';
 
   const apiBaseUrl = parseAndValidateURL(
@@ -50,15 +52,13 @@ const validateEnv = () => {
     ['http://', 'https://', 'ws://', 'wss://']
   );
 
-  if (!razorpayKeyId) {
-    throw new Error('Environment Variable Validation Error: "NEXT_PUBLIC_RAZORPAY_KEY_ID" is missing.');
-  }
-
   return {
     API_BASE_URL: apiBaseUrl,
     WS_URL: wsUrl,
-    GOOGLE_MAPS_KEY: googleMapsKey,
     RAZORPAY_KEY_ID: razorpayKeyId,
+    MAP_TILE_URL: mapTileUrl,
+    NOMINATIM_URL: nominatimUrl,
+    OSRM_URL: osrmUrl,
     IS_PRODUCTION: nodeEnv === 'production',
     IS_DEVELOPMENT: nodeEnv === 'development',
     IS_TEST: nodeEnv === 'test',

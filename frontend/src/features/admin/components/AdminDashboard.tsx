@@ -1,53 +1,33 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Employee, Vehicle, Settings, UserRental } from '../types';
-import { initialEmployees, initialVehicles, initialSettings, initialUserRentals } from '../mock-data';
+import { useSession } from '@/src/context/SessionContext';
+import { useOrgAdminDashboard, useSuperAdminDashboard } from '@/src/hooks/useProfile';
+import { useVehicles } from '@/src/hooks/useVehicles';
 import EmployeesTab from './EmployeesTab';
 import VehiclesTab from './VehiclesTab';
 import UsersTab from './UsersTab';
 import SettingsTab from './SettingsTab';
 import AnalysisGraph from './AnalysisGraph';
-import { vehiclesApi } from '@/src/api/vehicles';
 
 export default function Dashboard({ onLogout }: { onLogout?: () => void }) {
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
-  const [vehicles, setVehicles] = useState<any[]>(initialVehicles);
-  const [settings, setSettings] = useState<Settings>(initialSettings);
-  const [rentals, setRentals] = useState<UserRental[]>(initialUserRentals);
+  const { user } = useSession();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'employees' | 'vehicles' | 'users' | 'settings'>('dashboard');
-  const [showNavDropdown, setShowNavDropdown] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
-  const loadAdminData = async () => {
-    try {
-      const res = (await vehiclesApi.findAll()) as any;
-      if (res.success && res.data) {
-        const mapped = res.data.map((v: any) => ({
-          id: v.id,
-          registrationNumber: v.registrationNumber,
-          model: v.model,
-          seatingCapacity: v.seatingCapacity,
-          driver: v.owner ? `${v.owner.firstName} ${v.owner.lastName}` : "Employee",
-          status: v.verificationStatus === 'VERIFIED' ? 'Active' : v.verificationStatus,
-          verificationStatus: v.verificationStatus
-        }));
-        setVehicles(mapped);
-      }
-    } catch (e) {
-      console.error("Failed to load admin vehicles:", e);
-    }
-  };
+  // Load backend aggregates based on admin roles dynamically
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const orgAdminQuery = useOrgAdminDashboard();
+  const superAdminQuery = useSuperAdminDashboard();
+  const { verifyVehicle } = useVehicles();
 
-  useEffect(() => {
-    loadAdminData();
-  }, [activeTab]);
+  const dashboardData = isSuperAdmin ? superAdminQuery.data : orgAdminQuery.data;
+  const isLoading = isSuperAdmin ? superAdminQuery.isLoading : orgAdminQuery.isLoading;
 
   const handleVerifyVehicle = async (id: string, status: 'VERIFIED' | 'REJECTED') => {
     try {
-      await (vehiclesApi.verify(id, status) as any);
+      await verifyVehicle({ id, status });
       showToast(`Vehicle status updated to ${status}.`, 'success');
-      await loadAdminData();
     } catch (err: any) {
       showToast(err?.message || "Failed to update vehicle verification status.", 'info');
     }
@@ -74,47 +54,10 @@ export default function Dashboard({ onLogout }: { onLogout?: () => void }) {
     }, 4000);
   };
 
-  const handleAddEmployee = (newEmp: Employee) => {
-    setEmployees((prev) => [...prev, newEmp]);
-    setSettings((prev) => ({
-      ...prev,
-      registeredEmployees: prev.registeredEmployees + 1,
-    }));
-    showToast(`Employee "${newEmp.name}" added successfully.`);
-  };
-
-  const handleAddVehicle = (newVeh: Vehicle) => {
-    setVehicles((prev) => [...prev, newVeh]);
-    showToast(`Vehicle "${newVeh.registrationNumber}" registered successfully.`);
-  };
-
-
-  const handleAddRental = (newRental: UserRental) => {
-    setRentals((prev) => [...prev, newRental]);
-    showToast(`Rental for "${newRental.userName}" recorded successfully.`);
-  };
-
-  const handleSaveSettings = (updatedSettings: Settings) => {
-    setSettings(updatedSettings);
-    showToast('Organization settings updated successfully.', 'success');
-  };
-
-  const handleToggleAccess = (employeeId: string) => {
-    setEmployees((prev) =>
-      prev.map((emp) => {
-        if (emp.id === employeeId) {
-          const nextAccess = emp.platformAccess === 'Granted' ? 'Revoked' : 'Granted';
-          showToast(`Access status for ${emp.name} is now ${nextAccess}.`, 'info');
-          return { ...emp, platformAccess: nextAccess };
-        }
-        return emp;
-      })
-    );
-  };
-
-  const totalEmployeesCount = employees.length; // Dynamic count matching actual length
-  const totalVehiclesCount = vehicles.length; // Dynamic count matching actual length
-  const ridesThisMonthCount = 163 + rentals.length - initialUserRentals.length;
+  // Safe fallback counts
+  const totalEmployeesCount = dashboardData?.employeeCount || dashboardData?.employeesCount || 0;
+  const totalVehiclesCount = dashboardData?.pendingVehicles?.length || 0;
+  const ridesThisMonthCount = dashboardData?.stats?.totalRidesOffered || dashboardData?.tripsCount || 0;
 
   return (
     <div className={`min-h-screen font-sans selection:bg-sky-500/30 selection:text-sky-300 transition-colors duration-300 ${
@@ -174,11 +117,10 @@ export default function Dashboard({ onLogout }: { onLogout?: () => void }) {
               </div>
               <span className={`font-semibold tracking-wide transition-colors ${
                 theme === 'dark' ? 'text-zinc-100' : 'text-slate-800'
-              }`}>{settings.companyName}</span>
+              }`}>Platform Admin</span>
             </div>
             
             <div className="flex items-center gap-4">
-              {/* Theme Switcher Button */}
               <button
                 onClick={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
                 className={`p-2 rounded-lg border transition-all cursor-pointer shadow-sm hover:scale-105 active:scale-95 ${
@@ -187,17 +129,8 @@ export default function Dashboard({ onLogout }: { onLogout?: () => void }) {
                     : 'bg-white border-slate-200 text-sky-600 hover:text-sky-700 hover:bg-slate-50'
                 }`}
                 title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
-                aria-label="Toggle theme"
               >
-                {theme === 'dark' ? (
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.364l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                  </svg>
-                )}
+                {theme === 'dark' ? '☀️' : '🌙'}
               </button>
 
               <span className={`text-xs font-medium uppercase tracking-wider border px-2.5 py-1 rounded-md transition-colors ${
@@ -205,16 +138,9 @@ export default function Dashboard({ onLogout }: { onLogout?: () => void }) {
               }`}>
                 Admin Portal
               </span>
-              <div className="w-8 h-8 rounded-full bg-sky-600 border border-zinc-900 shadow-md flex items-center justify-center text-xs font-bold text-white uppercase select-none">
-                OP
-              </div>
               <button
                 onClick={onLogout}
-                className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer shadow-sm hover:scale-105 active:scale-95 ${
-                  theme === 'dark'
-                    ? 'bg-red-950/40 border-red-900/50 text-red-400 hover:bg-red-900/30 hover:text-red-300'
-                    : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100 hover:text-red-700'
-                }`}
+                className="px-3 py-1.5 rounded-lg border border-red-200/50 bg-red-50/50 text-red-650 hover:bg-red-50 text-xs font-bold transition-all"
               >
                 Logout
               </button>
@@ -228,137 +154,97 @@ export default function Dashboard({ onLogout }: { onLogout?: () => void }) {
         
         {/* Metric Cards Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
-          {/* Card 1: Employees */}
-          <div className={`relative overflow-hidden rounded-xl border p-6 transition-all duration-300 group ${
-            theme === 'dark' 
-              ? 'border-zinc-900 bg-zinc-900/20 shadow-xl hover:border-zinc-800 hover:shadow-2xl' 
-              : 'border-slate-200 bg-white shadow-sm hover:border-slate-300 hover:shadow-md'
-          }`}>
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-              <svg className="w-20 h-20 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </div>
-            <p className={`text-xs font-medium uppercase tracking-wider mb-2 transition-colors ${
-              theme === 'dark' ? 'text-zinc-400' : 'text-slate-500'
-            }`}>Total Employees</p>
-            <p className={`text-4xl font-extrabold group-hover:scale-105 origin-left transition-transform duration-300 ${
-              theme === 'dark' ? 'text-sky-400' : 'text-sky-600'
-            }`}>{totalEmployeesCount}</p>
+          <div className="relative overflow-hidden rounded-xl border p-6 bg-white dark:bg-zinc-900">
+            <p className="text-xs font-medium uppercase tracking-wider mb-2 text-zinc-400">Total Employees</p>
+            <p className="text-4xl font-extrabold text-sky-400">{isLoading ? '...' : totalEmployeesCount}</p>
           </div>
 
-          {/* Card 2: Vehicles */}
-          <div className={`relative overflow-hidden rounded-xl border p-6 transition-all duration-300 group ${
-            theme === 'dark' 
-              ? 'border-zinc-900 bg-zinc-900/20 shadow-xl hover:border-zinc-800 hover:shadow-2xl' 
-              : 'border-slate-200 bg-white shadow-sm hover:border-slate-300 hover:shadow-md'
-          }`}>
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-              <svg className="w-20 h-20 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l2.414 2.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h4m-6 0a1 1 0 001-1m-4 1v-4h18v4" />
-              </svg>
-            </div>
-            <p className={`text-xs font-medium uppercase tracking-wider mb-2 transition-colors ${
-              theme === 'dark' ? 'text-zinc-400' : 'text-slate-500'
-            }`}>Registered Vehicles</p>
-            <p className={`text-4xl font-extrabold group-hover:scale-105 origin-left transition-transform duration-300 ${
-              theme === 'dark' ? 'text-sky-400' : 'text-sky-600'
-            }`}>{totalVehiclesCount}</p>
+          <div className="relative overflow-hidden rounded-xl border p-6 bg-white dark:bg-zinc-900">
+            <p className="text-xs font-medium uppercase tracking-wider mb-2 text-zinc-400">Pending Vehicle Requests</p>
+            <p className="text-4xl font-extrabold text-sky-400">{isLoading ? '...' : totalVehiclesCount}</p>
           </div>
 
-          {/* Card 3: Rides */}
-          <div className={`relative overflow-hidden rounded-xl border p-6 transition-all duration-300 group ${
-            theme === 'dark' 
-              ? 'border-zinc-900 bg-zinc-900/20 shadow-xl hover:border-zinc-800 hover:shadow-2xl' 
-              : 'border-slate-200 bg-white shadow-sm hover:border-slate-300 hover:shadow-md'
-          }`}>
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-              <svg className="w-20 h-20 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-              </svg>
-            </div>
-            <p className={`text-xs font-medium uppercase tracking-wider mb-2 transition-colors ${
-              theme === 'dark' ? 'text-zinc-400' : 'text-slate-500'
-            }`}>Rides This Month</p>
-            <p className={`text-4xl font-extrabold group-hover:scale-105 origin-left transition-transform duration-300 ${
-              theme === 'dark' ? 'text-sky-400' : 'text-sky-600'
-            }`}>{ridesThisMonthCount}</p>
+          <div className="relative overflow-hidden rounded-xl border p-6 bg-white dark:bg-zinc-900">
+            <p className="text-xs font-medium uppercase tracking-wider mb-2 text-zinc-400">Total Rides Commutes</p>
+            <p className="text-4xl font-extrabold text-sky-400">{isLoading ? '...' : ridesThisMonthCount}</p>
           </div>
-
         </div>
 
-        {/* Premium Horizontal Navigation Tab Bar (matching the Excalidraw sketches) */}
-        <div className={`flex flex-wrap items-center justify-between border-b pb-3 gap-4 transition-colors ${
-          theme === 'dark' ? 'border-zinc-900' : 'border-slate-200'
-        }`}>
-          <div className={`flex gap-1.5 p-1 backdrop-blur-md rounded-xl border shadow-inner transition-colors ${
-            theme === 'dark' ? 'bg-zinc-900/60 border-zinc-800/60' : 'bg-slate-100 border-slate-200/60'
-          }`}>
+        {/* Prem tab bar */}
+        <div className="flex flex-wrap items-center justify-between border-b pb-3 gap-4 border-zinc-200 dark:border-zinc-900">
+          <div className="flex gap-1.5 p-1 bg-zinc-100 rounded-xl dark:bg-zinc-900">
             {[
               { id: 'dashboard', label: 'Dashboard', icon: '📈' },
               { id: 'employees', label: 'Employees', icon: '👥' },
-              { id: 'vehicles', label: 'Vehicles', icon: '🚗' },
-              { id: 'users', label: 'Rentals', icon: '📋' },
-              { id: 'settings', label: 'Settings', icon: '⚙️' },
+              { id: 'vehicles', label: 'Vehicles Verification', icon: '🚗' },
+              { id: 'users', label: 'Ride History', icon: '📋' },
             ].map((tab) => {
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer active:scale-95 ${
-                    isActive
-                      ? 'bg-sky-600 text-white shadow-md shadow-sky-600/10 border border-sky-500/10'
-                      : theme === 'dark'
-                        ? 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
-                        : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'
+                  className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+                    isActive ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm" : "text-zinc-500"
                   }`}
                 >
-                  <span className="text-sm select-none">{tab.icon}</span>
+                  <span>{tab.icon}</span>
                   <span>{tab.label}</span>
                 </button>
               );
             })}
           </div>
-
-          <div className="flex items-center gap-2 text-xs font-semibold text-zinc-500">
-            <span>Active: </span>
-            <span className={`font-bold uppercase tracking-wider ${
-              theme === 'dark' ? 'text-zinc-300' : 'text-slate-600'
-            }`}>
-              {activeTab}
-            </span>
-          </div>
         </div>
 
         {/* Tab Render Area */}
-        <div className="py-2">
+        <div className="py-2 text-left">
           {activeTab === 'dashboard' && (
             <AnalysisGraph />
           )}
           {activeTab === 'employees' && (
             <EmployeesTab 
-              employees={employees} 
-              vehicles={vehicles}
-              rentals={rentals}
-              onAddEmployee={handleAddEmployee} 
-              onToggleAccess={handleToggleAccess}
+              employees={[]} 
+              vehicles={[]}
+              rentals={[]}
+              onAddEmployee={() => {}} 
+              onToggleAccess={() => {}}
               theme={theme} 
             />
           )}
           {activeTab === 'vehicles' && (
-            <VehiclesTab vehicles={vehicles} employees={employees} onAddVehicle={handleAddVehicle} onVerifyVehicle={handleVerifyVehicle} theme={theme} />
+            <VehiclesTab 
+              vehicles={(dashboardData?.pendingVehicles || []).map((v: any) => ({
+                id: v.id,
+                registrationNumber: v.registrationNumber,
+                model: v.model,
+                seatingCapacity: v.seatingCapacity,
+                driver: v.owner ? `${v.owner.firstName} ${v.owner.lastName}` : 'Driver',
+                status: v.verificationStatus
+              }))} 
+              employees={[]} 
+              onAddVehicle={async () => {}} 
+              onVerifyVehicle={handleVerifyVehicle} 
+              theme={theme} 
+            />
           )}
           {activeTab === 'users' && (
-            <UsersTab rentals={rentals} employees={employees} vehicles={vehicles} onAddRental={handleAddRental} theme={theme} />
-          )}
-          {activeTab === 'settings' && (
-            <SettingsTab settings={settings} onSaveSettings={handleSaveSettings} theme={theme} />
+            <UsersTab 
+              rentals={(dashboardData?.rideHistory || []).map((r: any) => ({
+                id: r.id,
+                userName: `${r.driver?.firstName} ${r.driver?.lastName}`,
+                vehicleModel: r.vehicle?.model,
+                vehicleReg: r.vehicle?.registrationNumber,
+                dateUsed: new Date(r.date).toLocaleDateString(),
+                timeRented: r.time,
+                locationUsed: `${r.pickupAddress} to ${r.destinationAddress}`
+              }))} 
+              employees={[]} 
+              vehicles={[]} 
+              onAddRental={async () => {}} 
+              theme={theme} 
+            />
           )}
         </div>
-
       </main>
     </div>
   );
