@@ -5,6 +5,7 @@ import { authApi, LoginPayload, RegisterPayload } from '../api/auth';
 import { usersApi, UserProfile } from '../api/users';
 import { walletApi, WalletDetails } from '../api/wallet';
 import { vehiclesApi, Vehicle } from '../api/vehicles';
+import { tokenStorage } from '@/src/lib/auth/token-storage';
 
 export interface NotificationItem {
   id: string;
@@ -54,7 +55,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     const initSession = async () => {
       if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('accessToken');
+        const token = tokenStorage.getAccessToken();
         if (token) {
           try {
             const profileRes = (await usersApi.getProfile()) as any;
@@ -77,8 +78,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
             }
           } catch (err) {
             console.error('Session restoration failed:', err);
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
+            tokenStorage.clearTokens();
           }
         }
       }
@@ -93,8 +93,8 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const res = (await authApi.login(payload)) as any;
       if (res.success && res.data) {
-        localStorage.setItem('accessToken', res.data.accessToken);
-        localStorage.setItem('refreshToken', res.data.refreshToken);
+        tokenStorage.setAccessToken(res.data.accessToken);
+        tokenStorage.setRefreshToken(res.data.refreshToken);
         
         // Fetch full profile details
         const profileRes = (await usersApi.getProfile()) as any;
@@ -139,8 +139,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (err) {
       console.error('Backend logout failed:', err);
     } finally {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      tokenStorage.clearTokens();
       setUser(null);
       setWallet(null);
       setVehicles([]);
