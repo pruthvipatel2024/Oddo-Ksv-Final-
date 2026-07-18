@@ -40,8 +40,4 @@ export class RegisterDto {
   @ApiProperty({ enum: UserType, example: UserType.INTERNAL, description: 'Type of user (INTERNAL or EXTERNAL)' })
   @IsEnum(UserType)
   userType: UserType;
-
-  @ApiProperty({ enum: UserRole, example: UserRole.PASSENGER, description: 'Desired role (PASSENGER or EMPLOYEE_DRIVER)' })
-  @IsEnum(UserRole)
-  role: UserRole;
 }

@@ -6,7 +6,7 @@ import {
   ConflictException,
   Logger,
 } from '@nestjs/common';
-import { Booking, BookingStatus, TripStatus, ParticipantRole } from '@prisma/client';
+import { Booking, BookingStatus, TripStatus, ParticipantRole, PaymentStatus, PaymentMethod } from '@prisma/client';
 import { BookingsRepository } from './bookings.repository';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
@@ -24,45 +24,101 @@ export class BookingsService {
   ) {}
 
   /**
-   * Request a new ride booking.
+   * Request a new ride booking and debit the passenger's wallet into platform escrow.
    */
-  async create(passengerId: string, organizationId: string, dto: CreateBookingDto): Promise<Booking> {
-    // 1. Verify ride exists and belongs to the passenger's organization
-    const ride = await this.ridesService.findById(dto.rideId, organizationId);
+  async create(passengerId: string, dto: CreateBookingDto): Promise<Booking> {
+    // 1. Verify ride exists globally
+    const ride = await this.ridesService.findById(dto.rideId);
 
     // 2. Prevent driver from booking their own ride
     if (ride.driverId === passengerId) {
       throw new BadRequestException('Drivers cannot book their own rides');
     }
 
-    // 3. Check for duplicates
+    // 3. Check for active duplicates
     const activeBooking = await this.bookingsRepository.findUserActiveBookingOnRide(passengerId, dto.rideId);
     if (activeBooking) {
       throw new ConflictException('You already have an active booking request for this ride');
     }
 
-    // 4. Generate unique booking reference (e.g. BCK-YYYYMMDD-XXXX)
+    const fare = Number(ride.farePerSeat) * dto.seatsBooked;
     const randomCode = Math.random().toString(36).substring(2, 7).toUpperCase();
     const bookingReference = `BCK-${Date.now().toString().substring(5, 10)}-${randomCode}`;
 
-    // 5. Calculate total fare
-    const fare = Number(ride.farePerSeat) * dto.seatsBooked;
+    // 4. Perform transaction-level escrow balance checks and debits
+    return this.prisma.$transaction(async (tx) => {
+      // Get passenger's wallet
+      const wallet = await tx.wallet.findUnique({
+        where: { userId: passengerId },
+      });
 
-    return this.bookingsRepository.create({
-      bookingReference,
-      seatsBooked: dto.seatsBooked,
-      fare,
-      status: BookingStatus.PENDING,
-      rideId: dto.rideId,
-      passengerId,
+      if (!wallet || Number(wallet.availableBalance) < fare) {
+        throw new BadRequestException('Insufficient wallet balance to book this ride. Please recharge your wallet.');
+      }
+
+      // Check current ride seat count
+      const currentRide = await tx.ride.findUnique({
+        where: { id: dto.rideId },
+      });
+
+      if (!currentRide || currentRide.status !== 'OPEN' || currentRide.availableSeats < dto.seatsBooked) {
+        throw new BadRequestException('The requested ride is not open or does not have enough available seats');
+      }
+
+      // Debit passenger wallet
+      await tx.wallet.update({
+        where: { id: wallet.id },
+        data: {
+          availableBalance: Number(wallet.availableBalance) - fare,
+        },
+      });
+
+      // Log wallet transaction
+      await tx.walletTransaction.create({
+        data: {
+          walletId: wallet.id,
+          userId: passengerId,
+          amount: fare,
+          type: 'DEBIT',
+          description: `Fare escrowed for booking: ${bookingReference}`,
+        },
+      });
+
+      // Create Booking
+      const booking = await tx.booking.create({
+        data: {
+          bookingReference,
+          seatsBooked: dto.seatsBooked,
+          fare,
+          status: BookingStatus.PENDING,
+          rideId: dto.rideId,
+          passengerId,
+        },
+      });
+
+      // Create Payment in ESCROWED state
+      await tx.payment.create({
+        data: {
+          tripId: '00000000-0000-0000-0000-000000000000', // Mock UUID, updated once Trip is created
+          bookingId: booking.id,
+          payerId: passengerId,
+          amount: fare,
+          method: PaymentMethod.WALLET,
+          status: PaymentStatus.ESCROWED,
+          currency: 'INR',
+        },
+      });
+
+      this.logger.log(`Booking ${bookingReference} requested. Escrowed fare: ${fare} from Passenger: ${passengerId}`);
+      return booking;
     });
   }
 
   /**
-   * Get booking details. Enforces organization isolation.
+   * Get booking details.
    */
-  async findById(id: string, organizationId?: string): Promise<Booking> {
-    const booking = await this.bookingsRepository.findDetailById(id, organizationId);
+  async findById(id: string): Promise<Booking> {
+    const booking = await this.bookingsRepository.findDetailById(id);
     if (!booking) {
       throw new NotFoundException('Booking not found');
     }
@@ -88,15 +144,14 @@ export class BookingsService {
   }
 
   /**
-   * Update booking status (Approval, Rejection, Cancellation) with seat updates.
+   * Update booking status (Approval, Rejection, Cancellation) with seat and wallet refunds.
    */
   async updateStatus(
     id: string,
     userId: string,
-    organizationId: string,
     dto: UpdateBookingStatusDto,
   ): Promise<Booking> {
-    const booking = await this.bookingsRepository.findDetailById(id, organizationId);
+    const booking = await this.bookingsRepository.findDetailById(id);
     if (!booking) {
       throw new NotFoundException('Booking not found');
     }
@@ -123,7 +178,7 @@ export class BookingsService {
   }
 
   /**
-   * Approve booking (Driver only) - Decrements seats and provisions Trip.
+   * Approve booking (Driver only) - Decrements seats, provisions Trip, and links payments.
    */
   private async approveBooking(booking: any, ride: any, driverId: string): Promise<Booking> {
     if (ride.driverId !== driverId) {
@@ -134,7 +189,6 @@ export class BookingsService {
       throw new BadRequestException('Can only approve pending bookings');
     }
 
-    // Run within a transaction to guarantee atomic seat decrements
     return this.prisma.$transaction(async (tx) => {
       // 1. Fetch ride details to check available seats (locks the record)
       const currentRide = await tx.ride.findUnique({
@@ -157,7 +211,6 @@ export class BookingsService {
         },
       });
 
-      // 3. If seats are now 0, auto-mark ride as FULL
       if (updatedRide.availableSeats === 0) {
         await tx.ride.update({
           where: { id: ride.id },
@@ -165,7 +218,7 @@ export class BookingsService {
         });
       }
 
-      // 4. Update booking status
+      // 3. Update booking status
       const updatedBooking = await tx.booking.update({
         where: { id: booking.id },
         data: {
@@ -174,13 +227,12 @@ export class BookingsService {
         },
       });
 
-      // 5. Retrieve or provision Trip record (1:1 with confirmed Ride)
+      // 4. Retrieve or provision Trip record (1:1 with confirmed Ride)
       let trip = await tx.trip.findUnique({
         where: { rideId: ride.id },
       });
 
       if (!trip) {
-        // Create trip
         trip = await tx.trip.create({
           data: {
             rideId: ride.id,
@@ -205,7 +257,13 @@ export class BookingsService {
         });
       }
 
-      // Add Passenger to Trip Participants (if not already there)
+      // Link payment escrow to the newly created Trip
+      await tx.payment.updateMany({
+        where: { bookingId: booking.id },
+        data: { tripId: trip.id },
+      });
+
+      // Add Passenger to Trip Participants
       const existingParticipant = await tx.tripParticipant.findUnique({
         where: {
           tripId_userId: {
@@ -225,13 +283,13 @@ export class BookingsService {
         });
       }
 
-      this.logger.log(`Booking ${booking.bookingReference} approved. Seats remaining: ${updatedRide.availableSeats}`);
+      this.logger.log(`Booking ${booking.bookingReference} approved. Trip ID: ${trip.id}`);
       return updatedBooking;
     });
   }
 
   /**
-   * Reject booking (Driver only).
+   * Reject booking (Driver only) - Refunds passenger.
    */
   private async rejectBooking(booking: any, ride: any, driverId: string, reason?: string): Promise<Booking> {
     if (ride.driverId !== driverId) {
@@ -242,17 +300,51 @@ export class BookingsService {
       throw new BadRequestException('Can only reject pending bookings');
     }
 
-    return this.bookingsRepository.update(booking.id, {
-      status: BookingStatus.REJECTED,
-      cancelReason: reason || 'Rejected by driver',
+    return this.prisma.$transaction(async (tx) => {
+      // Refund escrow payment back to the passenger's wallet
+      const payment = await tx.payment.findFirst({
+        where: { bookingId: booking.id, status: PaymentStatus.ESCROWED },
+      });
+
+      if (payment) {
+        const wallet = await tx.wallet.findUnique({ where: { userId: booking.passengerId } });
+        if (wallet) {
+          await tx.wallet.update({
+            where: { id: wallet.id },
+            data: { availableBalance: Number(wallet.availableBalance) + Number(payment.amount) },
+          });
+
+          await tx.walletTransaction.create({
+            data: {
+              walletId: wallet.id,
+              userId: booking.passengerId,
+              amount: payment.amount,
+              type: 'REFUND',
+              description: `Refund for rejected booking #${booking.bookingReference}`,
+            },
+          });
+        }
+
+        await tx.payment.update({
+          where: { id: payment.id },
+          data: { status: PaymentStatus.REFUNDED },
+        });
+      }
+
+      return tx.booking.update({
+        where: { id: booking.id },
+        data: {
+          status: BookingStatus.REJECTED,
+          cancelReason: reason || 'Rejected by driver',
+        },
+      });
     });
   }
 
   /**
-   * Cancel booking (Passenger or Driver) - Handles seat refunds.
+   * Cancel booking (Passenger or Driver) - Refunds seats and passenger wallet.
    */
   private async cancelBooking(booking: any, ride: any, userId: string, reason?: string): Promise<Booking> {
-    // 1. Verify access: must be passenger or driver
     if (booking.passengerId !== userId && ride.driverId !== userId) {
       throw new ForbiddenException('You cannot cancel this booking');
     }
@@ -261,9 +353,8 @@ export class BookingsService {
       throw new BadRequestException('Booking is already cancelled');
     }
 
-    // Run within a transaction to guarantee atomic seat refunds
     return this.prisma.$transaction(async (tx) => {
-      // If booking was CONFIRMED, refund the seats back to the ride
+      // 1. Refund seats if booking was already CONFIRMED
       if (booking.status === BookingStatus.CONFIRMED) {
         const currentRide = await tx.ride.findUnique({
           where: { id: ride.id },
@@ -274,13 +365,11 @@ export class BookingsService {
             where: { id: ride.id },
             data: {
               availableSeats: currentRide.availableSeats + booking.seatsBooked,
-              // If the ride was full, restore status to OPEN
               status: currentRide.status === 'FULL' ? 'OPEN' : currentRide.status,
             },
           });
         }
 
-        // Remove passenger from Trip participants
         const trip = await tx.trip.findUnique({
           where: { rideId: ride.id },
         });
@@ -296,6 +385,36 @@ export class BookingsService {
         }
       }
 
+      // 2. Refund escrowed payment
+      const payment = await tx.payment.findFirst({
+        where: { bookingId: booking.id, status: PaymentStatus.ESCROWED },
+      });
+
+      if (payment) {
+        const wallet = await tx.wallet.findUnique({ where: { userId: booking.passengerId } });
+        if (wallet) {
+          await tx.wallet.update({
+            where: { id: wallet.id },
+            data: { availableBalance: Number(wallet.availableBalance) + Number(payment.amount) },
+          });
+
+          await tx.walletTransaction.create({
+            data: {
+              walletId: wallet.id,
+              userId: booking.passengerId,
+              amount: payment.amount,
+              type: 'REFUND',
+              description: `Refund for cancelled booking #${booking.bookingReference}`,
+            },
+          });
+        }
+
+        await tx.payment.update({
+          where: { id: payment.id },
+          data: { status: PaymentStatus.REFUNDED },
+        });
+      }
+
       const updatedBooking = await tx.booking.update({
         where: { id: booking.id },
         data: {
@@ -304,13 +423,13 @@ export class BookingsService {
         },
       });
 
-      this.logger.log(`Booking ${booking.bookingReference} cancelled by ${userId}`);
+      this.logger.log(`Booking ${booking.bookingReference} cancelled. Refund issued.`);
       return updatedBooking;
     });
   }
 
   /**
-   * Mark booking as NO_SHOW or EXPIRED - Refunds seats.
+   * Mark booking as NO_SHOW or EXPIRED - Refunds seats and passenger.
    */
   private async markNoShowOrExpired(booking: any, ride: any, driverId: string, targetStatus: BookingStatus): Promise<Booking> {
     if (ride.driverId !== driverId) {
@@ -322,7 +441,7 @@ export class BookingsService {
     }
 
     return this.prisma.$transaction(async (tx) => {
-      // Refund seats
+      // Refund seats back to the ride
       const currentRide = await tx.ride.findUnique({
         where: { id: ride.id },
       });
@@ -334,6 +453,36 @@ export class BookingsService {
             availableSeats: currentRide.availableSeats + booking.seatsBooked,
             status: currentRide.status === 'FULL' ? 'OPEN' : currentRide.status,
           },
+        });
+      }
+
+      // Refund escrowed payment
+      const payment = await tx.payment.findFirst({
+        where: { bookingId: booking.id, status: PaymentStatus.ESCROWED },
+      });
+
+      if (payment) {
+        const wallet = await tx.wallet.findUnique({ where: { userId: booking.passengerId } });
+        if (wallet) {
+          await tx.wallet.update({
+            where: { id: wallet.id },
+            data: { availableBalance: Number(wallet.availableBalance) + Number(payment.amount) },
+          });
+
+          await tx.walletTransaction.create({
+            data: {
+              walletId: wallet.id,
+              userId: booking.passengerId,
+              amount: payment.amount,
+              type: 'REFUND',
+              description: `Refund for booking #${booking.bookingReference} (${targetStatus})`,
+            },
+          });
+        }
+
+        await tx.payment.update({
+          where: { id: payment.id },
+          data: { status: PaymentStatus.REFUNDED },
         });
       }
 

@@ -82,7 +82,7 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
 
     try {
       // 1. Fetch trip and check if the user is a registered participant of this trip
-      const trip = await this.tripsService.findById(data.tripId, user.organizationId || undefined);
+      const trip = await this.tripsService.findById(data.tripId);
       
       const isParticipant = trip.participants.some((p: any) => p.userId === user.sub);
       if (!isParticipant && user.role !== 'SUPER_ADMIN') {
@@ -93,7 +93,7 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
       // 2. Join the Socket.io room
       const roomName = `trip:${data.tripId}`;
       await client.join(roomName);
-      this.logger.log(`User ${user.email} joined tracking room: ${roomName}`);
+      this.logger.log('User joined tracking room');
       
       client.emit('joinedRoom', { room: roomName });
 
@@ -131,7 +131,7 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
 
     try {
       // 1. Validate that the trip exists
-      const trip = await this.tripsService.findById(data.tripId, user.organizationId || undefined);
+      const trip = await this.tripsService.findById(data.tripId);
 
       // 2. Only the assigned driver is allowed to publish location pings
       if (trip.ride.driverId !== user.sub) {

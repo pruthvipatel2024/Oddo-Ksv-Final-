@@ -75,11 +75,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
-      // 1. Fetch conversation and verify same-org / participant permissions
+      // 1. Fetch conversation and verify participant permissions
       const conversation = await this.chatService.getConversation(
         data.tripId,
         user.sub,
-        user.organizationId || undefined,
       );
 
       const roomName = `conversation:${conversation.id}`;

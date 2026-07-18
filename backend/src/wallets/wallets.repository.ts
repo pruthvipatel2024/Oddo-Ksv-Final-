@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Wallet, WalletTransaction } from '@prisma/client';
+import { Wallet } from '@prisma/client';
 import { BaseRepository } from '../database/base.repository';
 import { PrismaService } from '../database/prisma.service';
 
@@ -10,7 +10,7 @@ export class WalletsRepository extends BaseRepository<Wallet> {
   }
 
   /**
-   * Find a wallet belonging to a specific user.
+   * Find wallet by userId, including recent transactions.
    */
   async findByUserId(userId: string): Promise<Wallet | null> {
     return this.prisma.wallet.findUnique({
@@ -18,18 +18,9 @@ export class WalletsRepository extends BaseRepository<Wallet> {
       include: {
         transactions: {
           orderBy: { createdAt: 'desc' },
-          take: 10,
+          take: 20,
         },
       },
-    });
-  }
-
-  /**
-   * Find wallet by ID with write lock (useful inside transactions).
-   */
-  async findByIdForUpdate(id: string, tx: any): Promise<Wallet | null> {
-    return tx.wallet.findUnique({
-      where: { id },
     });
   }
 }

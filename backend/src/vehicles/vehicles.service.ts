@@ -119,12 +119,20 @@ export class VehiclesService {
     return this.vehiclesRepository.softDelete(id);
   }
 
-  /**
-   * Update verification status (Super Admin only).
-   */
-  async verify(id: string, status: VehicleVerificationStatus): Promise<Vehicle> {
-    // Check if vehicle exists
-    await this.vehiclesRepository.findById(id);
+  async verify(
+    id: string,
+    status: VehicleVerificationStatus,
+    adminOrgId?: string,
+  ): Promise<Vehicle> {
+    const vehicle = await this.vehiclesRepository.findById(id);
+
+    if (adminOrgId) {
+      const owner = await this.usersService.findById(vehicle.ownerId);
+      if (owner.organizationId !== adminOrgId) {
+        throw new ForbiddenException('Cannot verify vehicle belonging to an employee in another organization');
+      }
+    }
+
     return this.vehiclesRepository.update(id, { verificationStatus: status });
   }
 

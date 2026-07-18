@@ -10,7 +10,6 @@ import { TripsService } from './trips.service';
 import { UpdateTripStatusDto } from './dto/update-trip-status.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
-import { UserRole } from '@prisma/client';
 
 @ApiTags('Trips')
 @Controller({
@@ -33,17 +32,13 @@ export class TripsController {
 
   @Get(':id')
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Get detailed trip info by ID', description: 'Access is limited to trip participants or Platform Super Admins.' })
+  @ApiOperation({ summary: 'Get detailed trip info by ID', description: 'Access is limited to trip participants or Admins.' })
   @ApiResponse({ status: 200, description: 'Return detailed trip information.' })
-  @ApiResponse({ status: 403, description: 'Forbidden if cross-tenant.' })
   @ApiResponse({ status: 404, description: 'Trip not found.' })
-  async findOne(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+  async findOne(@Param('id') id: string) {
     return {
       success: true,
-      data: await this.tripsService.findById(
-        id,
-        user.role === UserRole.SUPER_ADMIN ? undefined : user.organizationId || undefined,
-      ),
+      data: await this.tripsService.findById(id),
     };
   }
 
@@ -63,7 +58,6 @@ export class TripsController {
       data: await this.tripsService.updateStatus(
         id,
         user.sub,
-        user.organizationId!,
         dto,
       ),
     };

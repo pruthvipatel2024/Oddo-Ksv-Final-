@@ -23,23 +23,19 @@ export class UsersController {
 
   @Get('profile')
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Get current user profile', description: 'Returns the profile details of the currently authenticated user.' })
+  @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({ status: 200, description: 'Return profile details.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async getProfile(@CurrentUser() currentUser: JwtPayload) {
     const user = await this.usersService.findById(currentUser.sub);
-    const { passwordHash, refreshTokenHash, ...cleanUser } = user;
-    return {
-      success: true,
-      data: cleanUser,
-    };
+    const { passwordHash, refreshTokenHash, ...cleanUser } = user as any;
+    return { success: true, data: cleanUser };
   }
 
   @Patch('profile')
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Update current user profile', description: 'Allows updating first name, last name, phone, employee code, and avatar.' })
+  @ApiOperation({ summary: 'Update current user profile' })
   @ApiResponse({ status: 200, description: 'Profile updated successfully.' })
-  @ApiResponse({ status: 400, description: 'Bad Request.' })
   async updateProfile(
     @CurrentUser() currentUser: JwtPayload,
     @Body() dto: UpdateProfileDto,
@@ -49,27 +45,89 @@ export class UsersController {
       dto,
       currentUser.role === UserRole.SUPER_ADMIN ? undefined : currentUser.organizationId || undefined,
     );
-    const { passwordHash, refreshTokenHash, ...cleanUser } = user;
+    const { passwordHash, refreshTokenHash, ...cleanUser } = user as any;
+    return { success: true, data: cleanUser };
+  }
+
+  // ─── Dashboard endpoints ───────────────────────────────────────────────────
+
+  /**
+   * Employee dashboard: upcoming bookings, offered rides, vehicles.
+   */
+  @Get('dashboard/employee')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Employee dashboard',
+    description: 'Returns upcoming bookings, offered rides, and vehicle list for the current employee.',
+  })
+  @ApiResponse({ status: 200, description: 'Employee dashboard data.' })
+  async employeeDashboard(@CurrentUser() currentUser: JwtPayload) {
     return {
       success: true,
-      data: cleanUser,
+      data: await this.usersService.getEmployeeDashboard(currentUser.sub),
     };
   }
 
-  @Get(':id')
+  /**
+   * Org-admin dashboard: commute stats, vehicle approval queue, ride history.
+   */
+  @Get('dashboard/org-admin')
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Get user details by ID', description: 'Retrieves another user’s profile. Access is strictly scoped to the same organization.' })
-  @ApiResponse({ status: 200, description: 'Return user details.' })
-  @ApiResponse({ status: 403, description: 'Forbidden. Cross-tenant queries are blocked.' })
-  @ApiResponse({ status: 404, description: 'User not found.' })
-  async findOne(@Param('id') id: string, @CurrentUser() currentUser: JwtPayload) {
-    // Standard users can only retrieve profiles belonging to the same organization
-    const orgFilter = currentUser.role === UserRole.SUPER_ADMIN ? undefined : currentUser.organizationId || undefined;
-    const user = await this.usersService.findById(id, orgFilter);
-    const { passwordHash, refreshTokenHash, ...cleanUser } = user;
+  @ApiOperation({
+    summary: 'Organization admin dashboard',
+    description: 'Returns employee counts, carbon savings, pending vehicle approvals, and recent ride history.',
+  })
+  @ApiResponse({ status: 200, description: 'Org-admin dashboard data.' })
+  @ApiResponse({ status: 403, description: 'Forbidden – requires ORGANIZATION_ADMIN or SUPER_ADMIN role.' })
+  async orgAdminDashboard(@CurrentUser() currentUser: JwtPayload) {
+    if (
+      currentUser.role !== UserRole.ORGANIZATION_ADMIN &&
+      currentUser.role !== UserRole.SUPER_ADMIN
+    ) {
+      throw new ForbiddenException('Org admin dashboard is restricted to ORGANIZATION_ADMIN and SUPER_ADMIN roles');
+    }
+    const orgId = currentUser.organizationId!;
     return {
       success: true,
-      data: cleanUser,
+      data: await this.usersService.getOrgAdminDashboard(orgId),
     };
+  }
+
+  /**
+   * Super-admin dashboard: platform-wide revenue, commission, active listings.
+   */
+  @Get('dashboard/super-admin')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Super admin platform dashboard',
+    description: 'Returns platform-wide aggregates: total orgs, employees, trips, revenue, and commission.',
+  })
+  @ApiResponse({ status: 200, description: 'Super admin dashboard data.' })
+  @ApiResponse({ status: 403, description: 'Forbidden – requires SUPER_ADMIN role.' })
+  async superAdminDashboard(@CurrentUser() currentUser: JwtPayload) {
+    if (currentUser.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Super admin dashboard is restricted to SUPER_ADMIN role');
+    }
+    return {
+      success: true,
+      data: await this.usersService.getSuperAdminDashboard(),
+    };
+  }
+
+  // ─── User lookup ───────────────────────────────────────────────────────────
+
+  @Get(':id')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Get user profile by ID',
+    description: 'Retrieves any verified user profile in the marketplace. Passwords are never returned.',
+  })
+  @ApiResponse({ status: 200, description: 'Return user details.' })
+  @ApiResponse({ status: 404, description: 'User not found.' })
+  async findOne(@Param('id') id: string, @CurrentUser() currentUser: JwtPayload) {
+    // SUPER_ADMIN can see anyone; others can look up any user (marketplace is global)
+    const user = await this.usersService.findById(id);
+    const { passwordHash, refreshTokenHash, ...cleanUser } = user as any;
+    return { success: true, data: cleanUser };
   }
 }

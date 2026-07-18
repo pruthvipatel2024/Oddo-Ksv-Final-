@@ -25,7 +25,7 @@ export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
   @Post()
-  @Roles(UserRole.PASSENGER)
+  @Roles(UserRole.EMPLOYEE)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Request a ride booking', description: 'Restricted to Passengers. Creates a reservation request that the driver can approve.' })
   @ApiResponse({ status: 201, description: 'Booking request registered.' })
@@ -34,12 +34,12 @@ export class BookingsController {
   async create(@CurrentUser() passenger: JwtPayload, @Body() dto: CreateBookingDto) {
     return {
       success: true,
-      data: await this.bookingsService.create(passenger.sub, passenger.organizationId!, dto),
+      data: await this.bookingsService.create(passenger.sub, dto),
     };
   }
 
   @Get()
-  @Roles(UserRole.PASSENGER, UserRole.EMPLOYEE_DRIVER)
+  @Roles(UserRole.EMPLOYEE)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'List passenger bookings', description: 'Returns a history of booking requests made by the current user.' })
   @ApiResponse({ status: 200, description: 'Return array of passenger bookings.' })
@@ -51,7 +51,7 @@ export class BookingsController {
   }
 
   @Get('ride/:rideId')
-  @Roles(UserRole.EMPLOYEE_DRIVER)
+  @Roles(UserRole.EMPLOYEE)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'List bookings for a specific ride', description: 'Restricted to the driver who published the ride.' })
   @ApiResponse({ status: 200, description: 'Return array of bookings.' })
@@ -65,17 +65,13 @@ export class BookingsController {
 
   @Get(':id')
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Get booking details by ID', description: 'Retrieves specific booking details. Access checks are applied.' })
+  @ApiOperation({ summary: 'Get booking details by ID', description: 'Retrieves specific booking details.' })
   @ApiResponse({ status: 200, description: 'Return booking details.' })
-  @ApiResponse({ status: 403, description: 'Forbidden if cross-tenant.' })
   @ApiResponse({ status: 404, description: 'Booking not found.' })
-  async findOne(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+  async findOne(@Param('id') id: string) {
     return {
       success: true,
-      data: await this.bookingsService.findById(
-        id,
-        user.role === UserRole.SUPER_ADMIN ? undefined : user.organizationId || undefined,
-      ),
+      data: await this.bookingsService.findById(id),
     };
   }
 
@@ -95,7 +91,6 @@ export class BookingsController {
       data: await this.bookingsService.updateStatus(
         id,
         user.sub,
-        user.organizationId!,
         dto,
       ),
     };

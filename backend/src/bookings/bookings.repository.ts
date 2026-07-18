@@ -12,14 +12,25 @@ export class BookingsRepository extends BaseRepository<Booking> {
   /**
    * Find booking with nested details.
    */
-  async findDetailById(id: string, organizationId?: string): Promise<any> {
+  async findDetailById(id: string): Promise<any> {
     return this.prisma.booking.findFirst({
       where: {
         id,
-        ride: organizationId ? { organizationId } : undefined,
       },
       include: {
-        ride: true,
+        ride: {
+          include: {
+            driver: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                phone: true,
+              },
+            },
+          },
+        },
         passenger: {
           select: {
             id: true,

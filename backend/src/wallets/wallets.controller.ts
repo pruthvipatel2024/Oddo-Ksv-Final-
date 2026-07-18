@@ -15,8 +15,8 @@ export class WalletsController {
 
   @Get('my-balance')
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Get current user wallet details', description: 'Returns wallet balance and the 10 most recent transaction ledger records.' })
-  @ApiResponse({ status: 200, description: 'Return wallet properties.' })
+  @ApiOperation({ summary: 'Get current user wallet details', description: 'Returns available balance, pending earnings, and recent transactions.' })
+  @ApiResponse({ status: 200, description: 'Return wallet details.' })
   async getMyWallet(@CurrentUser() user: JwtPayload) {
     return {
       success: true,
@@ -26,9 +26,9 @@ export class WalletsController {
 
   @Post('recharge')
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Deposit funds to wallet', description: 'Simulates depositing credits. In production, this validates a processed Razorpay order.' })
-  @ApiResponse({ status: 201, description: 'Funds credited successfully.' })
-  @ApiResponse({ status: 400, description: 'Invalid amount bounds.' })
+  @ApiOperation({ summary: 'Deposit funds to available wallet balance', description: 'Simulates depositing available cash.' })
+  @ApiResponse({ status: 201, description: 'Funds deposited successfully.' })
+  @ApiResponse({ status: 400, description: 'Invalid amount.' })
   async recharge(@CurrentUser() user: JwtPayload, @Body() dto: RechargeWalletDto) {
     return {
       success: true,

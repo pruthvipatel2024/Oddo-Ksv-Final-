@@ -5,7 +5,7 @@ import {
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
-import { Trip, TripStatus, RideStatus, UserRole } from '@prisma/client';
+import { Trip, TripStatus, RideStatus, PaymentStatus } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TripsRepository } from './trips.repository';
 import { UpdateTripStatusDto } from './dto/update-trip-status.dto';
@@ -22,10 +22,10 @@ export class TripsService {
   ) {}
 
   /**
-   * Get detailed trip details. Enforces organization isolation.
+   * Get detailed trip details.
    */
-  async findById(id: string, organizationId?: string): Promise<any> {
-    const trip = await this.tripsRepository.findDetailById(id, organizationId);
+  async findById(id: string): Promise<any> {
+    const trip = await this.tripsRepository.findDetailById(id);
     if (!trip) {
       throw new NotFoundException('Trip not found');
     }
@@ -45,10 +45,9 @@ export class TripsService {
   async updateStatus(
     id: string,
     userId: string,
-    organizationId: string,
     dto: UpdateTripStatusDto,
   ): Promise<Trip> {
-    const trip = await this.tripsRepository.findDetailById(id, organizationId);
+    const trip = await this.tripsRepository.findDetailById(id);
     if (!trip) {
       throw new NotFoundException('Trip not found');
     }
@@ -58,8 +57,7 @@ export class TripsService {
 
     // 1. Enforce driver authorization for operations (only driver can start/complete/cancel)
     const isDriver = trip.ride.driverId === userId;
-    
-    if (!isDriver && targetStatus !== TripStatus.PAYMENT_COMPLETED && targetStatus !== TripStatus.FAILED) {
+    if (!isDriver) {
       throw new ForbiddenException('Only the driver of the ride can modify active trip statuses');
     }
 
@@ -104,8 +102,57 @@ export class TripsService {
           data: { status: RideStatus.COMPLETED },
         });
 
-        // Automatically chain state to PAYMENT_PENDING once trip is completed
-        updateData.status = TripStatus.PAYMENT_PENDING;
+        // --- PERFORM DRIVER WALLET EARNINGS SETTLEMENT ---
+        const confirmedBookings = await tx.booking.findMany({
+          where: { rideId: trip.rideId, status: 'CONFIRMED' },
+        });
+
+        const grossFare = confirmedBookings.reduce((sum, b) => sum + Number(b.fare), 0);
+        const commissionRate = Number(process.env.PLATFORM_COMMISSION_PERCENT || 10) / 100;
+        const commissionAmount = Number((grossFare * commissionRate).toFixed(2));
+        const netEarnings = grossFare - commissionAmount;
+
+        // Update payment records status to SUCCESS
+        await tx.payment.updateMany({
+          where: { tripId: id, status: PaymentStatus.ESCROWED },
+          data: { status: PaymentStatus.SUCCESS },
+        });
+
+        // Credit Driver Wallet availableBalance
+        const driverWallet = await tx.wallet.findUnique({
+          where: { userId: trip.ride.driverId },
+        });
+
+        if (driverWallet) {
+          await tx.wallet.update({
+            where: { id: driverWallet.id },
+            data: {
+              availableBalance: Number(driverWallet.availableBalance) + netEarnings,
+            },
+          });
+
+          await tx.walletTransaction.create({
+            data: {
+              walletId: driverWallet.id,
+              userId: trip.ride.driverId,
+              amount: netEarnings,
+              type: 'CREDIT',
+              description: `Earnings for completed Trip #${id} (Net: ${netEarnings}, Comm: ${commissionAmount})`,
+            },
+          });
+        }
+
+        // Log Driver Settlement
+        await tx.driverSettlement.create({
+          data: {
+            driverId: trip.ride.driverId,
+            tripId: id,
+            grossFare,
+            commissionAmount,
+            netEarnings,
+            status: 'SETTLED',
+          },
+        });
       }
 
       if (targetStatus === TripStatus.CANCELLED) {
@@ -114,6 +161,55 @@ export class TripsService {
           where: { id: trip.rideId },
           data: { status: RideStatus.CANCELLED },
         });
+
+        // --- REFUND PASSENGER WALLETS ---
+        const confirmedBookings = await tx.booking.findMany({
+          where: { rideId: trip.rideId, status: 'CONFIRMED' },
+        });
+
+        for (const booking of confirmedBookings) {
+          const payment = await tx.payment.findFirst({
+            where: { bookingId: booking.id, status: PaymentStatus.ESCROWED },
+          });
+
+          if (payment) {
+            const wallet = await tx.wallet.findUnique({
+              where: { userId: booking.passengerId },
+            });
+
+            if (wallet) {
+              await tx.wallet.update({
+                where: { id: wallet.id },
+                data: {
+                  availableBalance: Number(wallet.availableBalance) + Number(payment.amount),
+                },
+              });
+
+              await tx.walletTransaction.create({
+                data: {
+                  walletId: wallet.id,
+                  userId: booking.passengerId,
+                  amount: payment.amount,
+                  type: 'REFUND',
+                  description: `Refund for cancelled trip #${id}`,
+                },
+              });
+            }
+
+            await tx.payment.update({
+              where: { id: payment.id },
+              data: { status: PaymentStatus.REFUNDED },
+            });
+          }
+
+          await tx.booking.update({
+            where: { id: booking.id },
+            data: {
+              status: 'CANCELLED',
+              cancelReason: 'Trip cancelled by driver',
+            },
+          });
+        }
       }
 
       // Update trip record
@@ -134,17 +230,11 @@ export class TripsService {
         },
       });
 
-      // Emit Domain Event for downstream decoupling modules (wallet billing, analytics)
-      if (updateData.status === TripStatus.PAYMENT_PENDING) {
-        this.eventEmitter.emit('trip.completed', {
-          tripId: id,
-          rideId: trip.rideId,
-          driverId: trip.ride.driverId,
-          fare: Number(trip.ride.farePerSeat),
-          distanceKm: updateData.actualDistance,
-          organizationId: trip.ride.organizationId,
-        });
-      }
+      // Emit Domain Event for decouple syncs
+      this.eventEmitter.emit('trip.status_changed', {
+        tripId: id,
+        status: updateData.status,
+      });
 
       this.logger.log(`Trip ${id} transitioned from ${currentStatus} to ${updateData.status}`);
       return updatedTrip;
@@ -159,10 +249,7 @@ export class TripsService {
       [TripStatus.BOOKED]: [TripStatus.STARTED, TripStatus.CANCELLED],
       [TripStatus.STARTED]: [TripStatus.IN_PROGRESS, TripStatus.COMPLETED, TripStatus.CANCELLED],
       [TripStatus.IN_PROGRESS]: [TripStatus.COMPLETED, TripStatus.CANCELLED],
-      [TripStatus.COMPLETED]: [TripStatus.PAYMENT_PENDING], // Handled internally
-      [TripStatus.PAYMENT_PENDING]: [TripStatus.PAYMENT_COMPLETED, TripStatus.FAILED],
-      [TripStatus.PAYMENT_COMPLETED]: [],
-      [TripStatus.FAILED]: [TripStatus.PAYMENT_COMPLETED], // Retry payment allowed
+      [TripStatus.COMPLETED]: [],
       [TripStatus.CANCELLED]: [],
     };
 

@@ -4,7 +4,7 @@ import {
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
-import { Message, Conversation } from '@prisma/client';
+import { Message, Conversation, TripStatus } from '@prisma/client';
 import { ChatRepository } from './chat.repository';
 import { TripsService } from '../trips/trips.service';
 
@@ -18,21 +18,25 @@ export class ChatService {
   ) {}
 
   /**
-   * Fetch conversation for a trip. Enforces that only trip participants can access.
+   * Fetch conversation for a trip. Enforces active trip lifecycle bounds and participant checks.
    */
-  async getConversation(tripId: string, userId: string, organizationId?: string): Promise<Conversation> {
+  async getConversation(tripId: string, userId: string): Promise<Conversation> {
     // 1. Verify trip and participant membership
-    const trip = await this.tripsService.findById(tripId, organizationId);
+    const trip = await this.tripsService.findById(tripId);
     const isParticipant = trip.participants.some((p: any) => p.userId === userId);
 
     if (!isParticipant && userId !== 'SUPER_ADMIN') {
       throw new ForbiddenException('You are not authorized to access chat history for this trip');
     }
 
-    // 2. Fetch or create conversation
+    // 2. Restrict chat access strictly to active trip windows (BOOKED, STARTED, IN_PROGRESS)
+    if (trip.status === TripStatus.COMPLETED || trip.status === TripStatus.CANCELLED) {
+      throw new ForbiddenException('Chat room is archived because the trip is completed or cancelled');
+    }
+
+    // 3. Fetch or create conversation
     let conversation = await this.chatRepository.findConversationByTripId(tripId);
     if (!conversation) {
-      // Lazy creation just in case
       conversation = await this.chatRepository.createConversation(tripId);
     }
 
@@ -42,8 +46,8 @@ export class ChatService {
   /**
    * Fetch messages for a trip.
    */
-  async getMessages(tripId: string, userId: string, organizationId?: string): Promise<Message[]> {
-    const conversation = await this.getConversation(tripId, userId, organizationId);
+  async getMessages(tripId: string, userId: string): Promise<Message[]> {
+    const conversation = await this.getConversation(tripId, userId);
     return this.chatRepository.findMessagesByConversationId(conversation.id);
   }
 

@@ -10,13 +10,12 @@ export class TripsRepository extends BaseRepository<Trip> {
   }
 
   /**
-   * Find trip details including participants and ride info.
+   * Find trip details including participants and ride info globally.
    */
-  async findDetailById(id: string, organizationId?: string): Promise<any> {
+  async findDetailById(id: string): Promise<any> {
     return this.prisma.trip.findFirst({
       where: {
         id,
-        ride: organizationId ? { organizationId } : undefined,
       },
       include: {
         ride: {
@@ -27,6 +26,8 @@ export class TripsRepository extends BaseRepository<Trip> {
                 firstName: true,
                 lastName: true,
                 phone: true,
+                avatar: true,
+                organization: { select: { id: true, name: true } },
               },
             },
             vehicle: true,
@@ -41,6 +42,7 @@ export class TripsRepository extends BaseRepository<Trip> {
                 lastName: true,
                 phone: true,
                 avatar: true,
+                organization: { select: { id: true, name: true } },
               },
             },
           },

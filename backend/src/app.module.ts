@@ -17,6 +17,9 @@ import { TripsModule } from './trips/trips.module';
 import { TrackingModule } from './tracking/tracking.module';
 import { ChatModule } from './chat/chat.module';
 import { WalletsModule } from './wallets/wallets.module';
+import { WithdrawalsModule } from './withdrawals/withdrawals.module';
+import { RatingsModule } from './ratings/ratings.module';
+import { PaymentsModule } from './payments/payments.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 
@@ -39,6 +42,9 @@ import { RolesGuard } from './auth/guards/roles.guard';
     TrackingModule,
     ChatModule,
     WalletsModule,
+    WithdrawalsModule,
+    RatingsModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [

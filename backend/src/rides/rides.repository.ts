@@ -10,16 +10,14 @@ export class RidesRepository extends BaseRepository<Ride> {
   }
 
   /**
-   * Find rides matching organization, date, and status bounds.
+   * Find global rides matching travel date and status.
    */
   async findMatchingRides(
-    organizationId: string,
     date: Date,
     status: RideStatus = RideStatus.OPEN,
-  ): Promise<Ride[]> {
+  ): Promise<any[]> {
     return this.prisma.ride.findMany({
       where: {
-        organizationId,
         date,
         status,
       },
@@ -32,6 +30,11 @@ export class RidesRepository extends BaseRepository<Ride> {
             email: true,
             phone: true,
             avatar: true,
+            organization: {
+              select: {
+                name: true,
+              },
+            },
           },
         },
         vehicle: true,
@@ -42,10 +45,9 @@ export class RidesRepository extends BaseRepository<Ride> {
   /**
    * Find a specific ride with detail properties.
    */
-  async findDetailById(id: string, organizationId?: string): Promise<any> {
-    const where = this.applyTenantFilter({ id }, organizationId);
-    return this.prisma.ride.findFirst({
-      where,
+  async findDetailById(id: string): Promise<any> {
+    return this.prisma.ride.findUnique({
+      where: { id },
       include: {
         driver: {
           select: {
@@ -55,6 +57,11 @@ export class RidesRepository extends BaseRepository<Ride> {
             email: true,
             phone: true,
             avatar: true,
+            organization: {
+              select: {
+                name: true,
+              },
+            },
           },
         },
         vehicle: true,

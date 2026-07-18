@@ -27,7 +27,6 @@ export class ChatController {
       data: await this.chatService.getMessages(
         tripId,
         user.sub,
-        user.organizationId || undefined,
       ),
     };
   }

@@ -12,7 +12,7 @@ import { SearchRideDto } from './dto/search-ride.dto';
 import { ConfirmRouteDto } from './dto/confirm-route.dto';
 import { MapsService } from '../maps/maps.service';
 import { VehiclesService } from '../vehicles/vehicles.service';
-import { OrganizationsService } from '../organizations/organizations.service';
+import { RatingsService } from '../ratings/ratings.service';
 
 @Injectable()
 export class RidesService {
@@ -22,7 +22,7 @@ export class RidesService {
     private readonly ridesRepository: RidesRepository,
     private readonly mapsService: MapsService,
     private readonly vehiclesService: VehiclesService,
-    private readonly orgsService: OrganizationsService,
+    private readonly ratingsService: RatingsService,
   ) {}
 
   /**
@@ -76,18 +76,14 @@ export class RidesService {
       dto.destinationLng,
     );
 
-    // 4. Retrieve organization settings to compute estimated fuel costs
-    const org = await this.orgsService.findById(organizationId);
-    
-    // Fuel Cost logic: Assume average mileage is 14 km per litre
+    // Fuel Cost logic: Standard marketplace calculation (100 INR fuel per litre, 14 km/litre mileage)
     const distanceKm = route.distanceMeters / 1000;
     const averageMileage = 14;
     const fuelUsedLitres = distanceKm / averageMileage;
-    // fuelCostPerLitre is a Decimal from Prisma, convert to number
-    const fuelRate = Number(org.fuelCostPerLitre);
+    const fuelRate = 100;
     const estimatedFuelCost = Number((fuelUsedLitres * fuelRate).toFixed(2));
 
-    // 5. Save the ride
+    // 4. Save the ride
     return this.ridesRepository.create({
       pickupAddress: dto.pickupAddress,
       pickupLat: dto.pickupLat,
@@ -107,6 +103,7 @@ export class RidesService {
       farePerSeat: dto.farePerSeat,
       recurring: dto.recurring || false,
       status: RideStatus.OPEN,
+      vehicleType: `${vehicle.manufacturer} ${vehicle.model}`,
       organizationId,
       driverId,
       vehicleId: dto.vehicleId,
@@ -114,17 +111,17 @@ export class RidesService {
   }
 
   /**
-   * Find a specific ride by ID. Enforces organization scope.
+   * Find a specific ride by ID.
    */
-  async findById(id: string, organizationId?: string): Promise<Ride> {
-    return this.ridesRepository.findById(id, organizationId);
+  async findById(id: string): Promise<Ride> {
+    return this.ridesRepository.findById(id);
   }
 
   /**
    * Find detailed ride properties, including bookings and driver profiles.
    */
   async findDetail(id: string, organizationId?: string): Promise<any> {
-    const ride = await this.ridesRepository.findDetailById(id, organizationId);
+    const ride = await this.ridesRepository.findDetailById(id);
     if (!ride) {
       throw new NotFoundException('Ride profile not found');
     }
@@ -132,23 +129,42 @@ export class RidesService {
   }
 
   /**
-   * Search and match rides using haversine proximity thresholds (2 km radius).
+   * Search and match rides globally across the marketplace.
    */
-  async search(organizationId: string, dto: SearchRideDto): Promise<Ride[]> {
+  async search(dto: SearchRideDto): Promise<any[]> {
     const travelDate = new Date(dto.date);
     
-    // Fetch all open rides in organization on that date
-    const openRides = await this.ridesRepository.findMatchingRides(organizationId, travelDate, RideStatus.OPEN);
+    // Fetch all open rides on that date globally
+    const openRides = await this.ridesRepository.findMatchingRides(travelDate, RideStatus.OPEN);
 
-    // Apply geographic haversine proximity filtering (max 2 km detour distance)
-    const matchedRides = openRides.filter((ride) => {
+    // Compute target departure total minutes from midnight
+    const searchDateTime = new Date(dto.date);
+    const searchHours = searchDateTime.getUTCHours();
+    const searchMinutesTotal = searchHours * 60 + searchDateTime.getUTCMinutes();
+
+    const matches: any[] = [];
+
+    for (const ride of openRides) {
       // 1. Check seat availability
       const seatsNeeded = dto.seatsNeeded || 1;
       if (ride.availableSeats < seatsNeeded) {
-        return false;
+        continue;
       }
 
-      // 2. Calculate distance between search pickup and ride pickup
+      // 2. Check maximum price constraint
+      if (dto.maxPrice && Number(ride.farePerSeat) > dto.maxPrice) {
+        continue;
+      }
+
+      // 3. Check vehicle type constraint
+      if (dto.vehicleType && ride.vehicleType) {
+        const vehicleMatch = ride.vehicleType.toLowerCase().includes(dto.vehicleType.toLowerCase());
+        if (!vehicleMatch) {
+          continue;
+        }
+      }
+
+      // 4. Calculate pickup proximity
       const pickupDistance = this.haversineDistance(
         Number(ride.pickupLat),
         Number(ride.pickupLng),
@@ -156,7 +172,12 @@ export class RidesService {
         dto.pickupLng,
       );
 
-      // 3. Calculate distance between search destination and ride destination
+      const pickupRadiusLimit = dto.pickupRadius ?? 2000;
+      if (pickupDistance > pickupRadiusLimit) {
+        continue;
+      }
+
+      // 5. Calculate destination proximity
       const destDistance = this.haversineDistance(
         Number(ride.destinationLat),
         Number(ride.destinationLng),
@@ -164,11 +185,50 @@ export class RidesService {
         dto.destinationLng,
       );
 
-      // Match only if both points are within 2000 meters
-      return pickupDistance <= 2000 && destDistance <= 2000;
+      const destRadiusLimit = dto.destinationRadius ?? 2000;
+      if (destDistance > destRadiusLimit) {
+        continue;
+      }
+
+      // 6. Check time window
+      const [rideH, rideM] = ride.time.split(':').map(Number);
+      const rideMinutesTotal = rideH * 60 + rideM;
+      const timeDiff = Math.abs(rideMinutesTotal - searchMinutesTotal);
+
+      if (timeDiff > (dto.timeWindowMinutes ?? 30)) {
+        continue;
+      }
+
+      // 7. Get driver average rating
+      const driverRating = await this.ratingsService.getAverageRating(ride.driverId);
+      if (dto.minDriverRating && driverRating < dto.minDriverRating) {
+        continue;
+      }
+
+      // Proximity match passed - compile metrics
+      matches.push({
+        ...ride,
+        metrics: {
+          pickupDistance,
+          destDistance,
+          totalDetour: pickupDistance + destDistance,
+          driverRating,
+        },
+      });
+    }
+
+    // Sort by best match (lowest total detour distance, then highest driver rating, then lowest price)
+    matches.sort((a, b) => {
+      const detourDiff = a.metrics.totalDetour - b.metrics.totalDetour;
+      if (detourDiff !== 0) return detourDiff;
+
+      const ratingDiff = b.metrics.driverRating - a.metrics.driverRating;
+      if (ratingDiff !== 0) return ratingDiff;
+
+      return Number(a.farePerSeat) - Number(b.farePerSeat);
     });
 
-    return matchedRides;
+    return matches;
   }
 
   /**

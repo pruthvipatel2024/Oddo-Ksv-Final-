@@ -18,18 +18,27 @@ export class WalletsService {
   ) {}
 
   /**
-   * Get user wallet details.
+   * Get user wallet details by userId.
    */
   async findByUserId(userId: string): Promise<Wallet> {
     const wallet = await this.walletsRepository.findByUserId(userId);
     if (!wallet) {
-      throw new NotFoundException('Wallet profile not found');
+      // Lazy create wallet if missing
+      return this.prisma.$transaction(async (tx) => {
+        return tx.wallet.create({
+          data: {
+            userId,
+            availableBalance: 0.0,
+            pendingEarnings: 0.0,
+          },
+        });
+      });
     }
     return wallet;
   }
 
   /**
-   * Recharge user wallet balance (Credit).
+   * Recharge available balance (Deposit).
    */
   async recharge(userId: string, amount: number, referenceId?: string): Promise<Wallet> {
     return this.prisma.$transaction(async (tx) => {
@@ -41,65 +50,61 @@ export class WalletsService {
         throw new NotFoundException('Wallet not found');
       }
 
-      // 1. Update wallet balance
       const updated = await tx.wallet.update({
         where: { id: wallet.id },
         data: {
-          balance: Number(wallet.balance) + amount,
+          availableBalance: Number(wallet.availableBalance) + amount,
         },
       });
 
-      // 2. Record ledger transaction
       await tx.walletTransaction.create({
         data: {
           walletId: wallet.id,
           userId: wallet.userId,
           amount,
-          type: TransactionType.CREDIT,
-          description: 'Wallet recharge deposit',
+          type: TransactionType.DEPOSIT,
+          description: 'Wallet deposit recharge',
           relatedPaymentId: referenceId || null,
         },
       });
 
-      this.logger.log(`Wallet ${wallet.id} recharged with ${amount}. New balance: ${updated.balance}`);
+      this.logger.log(`Wallet ${wallet.id} deposited: ${amount}. Available: ${updated.availableBalance}`);
       return updated;
     });
   }
 
   /**
-   * Debit money from wallet. Enforces balance guards.
+   * Debit money from availableBalance. Enforces balance guards.
    */
   async debit(
-    walletId: string,
+    userId: string,
     amount: number,
     description: string,
     referenceId?: string,
     dbTx?: any,
   ): Promise<Wallet> {
     const runUpdate = async (tx: any) => {
-      const wallet = await tx.wallet.findUnique({ where: { id: walletId } });
+      const wallet = await tx.wallet.findUnique({ where: { userId } });
       if (!wallet) {
-        throw new NotFoundException('Wallet profile not found');
+        throw new NotFoundException('Wallet not found');
       }
 
-      const balance = Number(wallet.balance);
+      const balance = Number(wallet.availableBalance);
       if (balance - amount < 0) {
         throw new BadRequestException('Insufficient wallet balance to perform deduction');
       }
 
-      // Update wallet balance
       const updated = await tx.wallet.update({
-        where: { id: walletId },
+        where: { id: wallet.id },
         data: {
-          balance: balance - amount,
+          availableBalance: balance - amount,
         },
       });
 
-      // Write ledger transaction
       await tx.walletTransaction.create({
         data: {
-          walletId,
-          userId: wallet.userId,
+          walletId: wallet.id,
+          userId,
           amount,
           type: TransactionType.DEBIT,
           description,
@@ -110,40 +115,36 @@ export class WalletsService {
       return updated;
     };
 
-    if (dbTx) {
-      return runUpdate(dbTx);
-    } else {
-      return this.prisma.$transaction(runUpdate);
-    }
+    return dbTx ? runUpdate(dbTx) : this.prisma.$transaction(runUpdate);
   }
 
   /**
-   * Credit money to wallet.
+   * Credit money to availableBalance.
    */
   async credit(
-    walletId: string,
+    userId: string,
     amount: number,
     description: string,
     referenceId?: string,
     dbTx?: any,
   ): Promise<Wallet> {
     const runUpdate = async (tx: any) => {
-      const wallet = await tx.wallet.findUnique({ where: { id: walletId } });
+      const wallet = await tx.wallet.findUnique({ where: { userId } });
       if (!wallet) {
-        throw new NotFoundException('Wallet profile not found');
+        throw new NotFoundException('Wallet not found');
       }
 
       const updated = await tx.wallet.update({
-        where: { id: walletId },
+        where: { id: wallet.id },
         data: {
-          balance: Number(wallet.balance) + amount,
+          availableBalance: Number(wallet.availableBalance) + amount,
         },
       });
 
       await tx.walletTransaction.create({
         data: {
-          walletId,
-          userId: wallet.userId,
+          walletId: wallet.id,
+          userId,
           amount,
           type: TransactionType.CREDIT,
           description,
@@ -154,10 +155,74 @@ export class WalletsService {
       return updated;
     };
 
-    if (dbTx) {
-      return runUpdate(dbTx);
-    } else {
-      return this.prisma.$transaction(runUpdate);
-    }
+    return dbTx ? runUpdate(dbTx) : this.prisma.$transaction(runUpdate);
+  }
+
+  /**
+   * Move pending earnings to available balance.
+   */
+  async releaseEarnings(
+    userId: string,
+    grossAmount: number,
+    netAmount: number,
+    description: string,
+    referenceId?: string,
+    dbTx?: any,
+  ): Promise<Wallet> {
+    const runUpdate = async (tx: any) => {
+      const wallet = await tx.wallet.findUnique({ where: { userId } });
+      if (!wallet) {
+        throw new NotFoundException('Wallet not found');
+      }
+
+      const pending = Number(wallet.pendingEarnings);
+      const updated = await tx.wallet.update({
+        where: { id: wallet.id },
+        data: {
+          pendingEarnings: pending - grossAmount >= 0 ? pending - grossAmount : 0,
+          availableBalance: Number(wallet.availableBalance) + netAmount,
+        },
+      });
+
+      await tx.walletTransaction.create({
+        data: {
+          walletId: wallet.id,
+          userId,
+          amount: netAmount,
+          type: TransactionType.CREDIT,
+          description,
+          relatedPaymentId: referenceId || null,
+        },
+      });
+
+      return updated;
+    };
+
+    return dbTx ? runUpdate(dbTx) : this.prisma.$transaction(runUpdate);
+  }
+
+  /**
+   * Add to pending earnings.
+   */
+  async addPendingEarnings(
+    userId: string,
+    amount: number,
+    dbTx?: any,
+  ): Promise<Wallet> {
+    const runUpdate = async (tx: any) => {
+      const wallet = await tx.wallet.findUnique({ where: { userId } });
+      if (!wallet) {
+        throw new NotFoundException('Wallet not found');
+      }
+
+      return tx.wallet.update({
+        where: { id: wallet.id },
+        data: {
+          pendingEarnings: Number(wallet.pendingEarnings) + amount,
+        },
+      });
+    };
+
+    return dbTx ? runUpdate(dbTx) : this.prisma.$transaction(runUpdate);
   }
 }

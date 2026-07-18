@@ -40,11 +40,6 @@ export class AuthService {
       throw new BadRequestException('Invalid organization code');
     }
 
-    // 2. Prevent sign up as SUPER_ADMIN
-    if (dto.role === UserRole.SUPER_ADMIN) {
-      throw new ForbiddenException('Cannot register as Super Admin directly');
-    }
-
     // 3. Hash the user's password
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(dto.password, saltRounds);
@@ -60,7 +55,7 @@ export class AuthService {
           lastName: dto.lastName,
           phone: dto.phone,
           employeeCode: dto.employeeCode || null,
-          role: dto.role,
+          role: UserRole.EMPLOYEE,
           userType: dto.userType,
           status: UserStatus.ACTIVE,
           organizationId: org.id,
@@ -71,7 +66,8 @@ export class AuthService {
       await tx.wallet.create({
         data: {
           userId: user.id,
-          balance: 0.0,
+          availableBalance: 0.0,
+          pendingEarnings: 0.0,
         },
       });
 
