@@ -5,11 +5,14 @@ import {
   Param,
   Body,
   ForbiddenException,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateUserStatusDto } from './dto/update-status.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { UserRole } from '@prisma/client';
@@ -49,6 +52,24 @@ export class UsersController {
     );
     const { passwordHash, refreshTokenHash, ...cleanUser } = user as any;
     return { success: true, data: cleanUser };
+  }
+
+  @Patch('change-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Change current user password' })
+  @ApiResponse({ status: 200, description: 'Password changed successfully.' })
+  @ApiResponse({ status: 400, description: 'Invalid current password.' })
+  async changePassword(
+    @CurrentUser() currentUser: JwtPayload,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    await this.usersService.changePassword(
+      currentUser.sub,
+      dto.oldPassword,
+      dto.newPassword,
+    );
+    return { success: true, message: 'Password changed successfully' };
   }
 
   // ─── Dashboard endpoints ───────────────────────────────────────────────────

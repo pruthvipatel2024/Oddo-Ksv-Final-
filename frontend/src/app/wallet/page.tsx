@@ -8,13 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/ui/icons";
 import { useWallet } from "@/hooks/useWallet";
 
-type Method = "card" | "upi" | "netbanking" | "cash";
+type Method = "card" | "upi" | "netbanking";
 
 const methods: { id: Method; label: string; hint: string }[] = [
   { id: "upi", label: "UPI", hint: "UPI ID or QR scan" },
   { id: "card", label: "Card", hint: "Debit or credit card" },
   { id: "netbanking", label: "Net Banking", hint: "Pay via your bank" },
-  { id: "cash", label: "Cash", hint: "Add cash at a kiosk" },
 ];
 
 const banks = ["HDFC Bank", "ICICI Bank", "SBI", "Axis Bank", "Kotak Mahindra"];
@@ -108,7 +107,7 @@ export default function WalletPage() {
               {/* Step 2: method */}
               <div>
                 <span className="mb-1.5 block text-sm font-medium text-ink-600 dark:text-ink-300">Payment method</span>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {methods.map((m) => (
                     <button
                       type="button"
@@ -203,20 +202,8 @@ export default function WalletPage() {
                 </div>
               )}
 
-              {method === "cash" && (
-                <div className="flex flex-col gap-2 rounded-xl border border-dashed border-ink-200 p-4 text-sm dark:border-ink-700">
-                  <p className="font-medium text-ink-700 dark:text-ink-200">Add cash at a partner kiosk</p>
-                  <p className="text-ink-500 dark:text-ink-400">
-                    Show this reference code at any partner kiosk or your office admin desk. Your wallet updates within a few minutes of payment.
-                  </p>
-                  <div className="mt-1 w-fit rounded-lg bg-ink-100 px-3 py-1.5 font-mono text-xs font-semibold text-ink-700 dark:bg-ink-800 dark:text-ink-200">
-                    REF-8842-CASH
-                  </div>
-                </div>
-              )}
-
               <Button type="submit" className="w-full" size="lg" disabled={isRecharging}>
-                {isRecharging ? "Processing..." : method === "cash" ? "Generate Reference Code" : `Add ₹${amount}`}
+                {isRecharging ? "Processing..." : `Add ₹${amount}`}
               </Button>
               <p className="text-center text-xs text-ink-400">Payments are encrypted and processed securely.</p>
             </form>

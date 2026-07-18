@@ -7,45 +7,49 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Icons } from "@/components/ui/icons";
 import { useVehicles } from "@/hooks/useVehicles";
-import { vehicleCatalog } from "@/lib/mock-data";
-
 export default function MyVehiclePage() {
   const { vehicles, createVehicle, deleteVehicle, isLoading, isCreating } = useVehicles();
   const [adding, setAdding] = useState(false);
-  const [selectedModel, setSelectedModel] = useState(vehicleCatalog[0].model);
+  const [modelName, setModelName] = useState("");
+  const [seatingCapacity, setSeatingCapacity] = useState<number | "">("");
   const [regNo, setRegNo] = useState("");
-  const [color, setColor] = useState("White");
+  const [color, setColor] = useState("");
 
   // Get the first registered vehicle
   const activeVehicle = vehicles[0] || null;
 
-  const selected = vehicleCatalog.find((v) => v.model === selectedModel)!;
-
   const getManufacturer = (modelName: string) => {
-    if (modelName.includes("Swift") || modelName.includes("Alto") || modelName.includes("Baleno") || modelName.includes("Ertiga")) return "Suzuki";
-    if (modelName.includes("Innova")) return "Toyota";
-    if (modelName.includes("City")) return "Honda";
-    if (modelName.includes("Nexon")) return "Tata";
+    const lowerModel = modelName.toLowerCase();
+    if (lowerModel.includes("swift") || lowerModel.includes("alto") || lowerModel.includes("baleno") || lowerModel.includes("ertiga")) return "Suzuki";
+    if (lowerModel.includes("innova")) return "Toyota";
+    if (lowerModel.includes("city")) return "Honda";
+    if (lowerModel.includes("nexon")) return "Tata";
     return "Other";
   };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!modelName.trim()) return;
+    if (seatingCapacity === "" || isNaN(Number(seatingCapacity)) || Number(seatingCapacity) <= 0) {
+      return;
+    }
     try {
       // If there is already a vehicle, remove it first
       if (activeVehicle) {
         await deleteVehicle(activeVehicle.id);
       }
       await createVehicle({
-        manufacturer: getManufacturer(selectedModel),
-        model: selectedModel,
+        manufacturer: getManufacturer(modelName),
+        model: modelName.trim(),
         color: color.trim(),
         registrationNumber: regNo.toUpperCase().trim(),
-        seatingCapacity: selected.seats,
+        seatingCapacity: Number(seatingCapacity),
       });
       setAdding(false);
+      setModelName("");
+      setSeatingCapacity("");
       setRegNo("");
-      setColor("White");
+      setColor("");
     } catch (err) {
       console.error("Failed to add vehicle", err);
     }
@@ -137,42 +141,30 @@ export default function MyVehiclePage() {
             <h2 className="font-display text-lg font-bold text-ink-800 dark:text-white">
               {activeVehicle ? "Change Vehicle" : "Add Vehicle"}
             </h2>
-            <p className="mb-5 text-sm text-ink-400">Choose your vehicle from the list — seats fill in automatically.</p>
+            <p className="mb-5 text-sm text-ink-400">Enter your vehicle details below.</p>
 
             <form className="flex flex-col gap-4" onSubmit={handleAdd}>
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-ink-600 dark:text-ink-300">Vehicle model</span>
-                <select
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  className="w-full rounded-xl border border-ink-200 bg-white px-3.5 py-2.5 text-sm text-ink-800 outline-none focus:border-teal-500 dark:border-ink-700 dark:bg-ink-800 dark:text-ink-100"
-                >
-                  {vehicleCatalog.map((v) => (
-                    <option key={v.model} value={v.model}>
-                      {v.model} · {v.type}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <Input
+                label="Vehicle model"
+                placeholder="e.g. Swift Dzire, Innova Crysta"
+                value={modelName}
+                onChange={(e) => setModelName(e.target.value)}
+                required
+              />
 
-              {/* Catalog picker as visual cards */}
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {vehicleCatalog.map((v) => (
-                  <button
-                    type="button"
-                    key={v.model}
-                    onClick={() => setSelectedModel(v.model)}
-                    className={`rounded-xl border p-3 text-left text-xs transition-colors cursor-pointer ${
-                      selectedModel === v.model
-                        ? "border-teal-500 bg-teal-50 text-teal-700 dark:bg-teal-500/10 dark:text-teal-300"
-                        : "border-ink-200 text-ink-600 hover:border-ink-300 dark:border-ink-700 dark:text-ink-300"
-                    }`}
-                  >
-                    <p className="font-semibold">{v.model}</p>
-                    <p className="text-[10px] text-ink-450">{v.type} · {v.seats} seats</p>
-                  </button>
-                ))}
-              </div>
+              <Input
+                label="Seating capacity"
+                type="number"
+                min={1}
+                max={10}
+                placeholder="e.g. 4"
+                value={seatingCapacity}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSeatingCapacity(val === "" ? "" : Number(val));
+                }}
+                required
+              />
 
               <div className="grid grid-cols-2 gap-4">
                 <Input
@@ -191,11 +183,7 @@ export default function MyVehiclePage() {
                 />
               </div>
 
-              <div className="rounded-xl border border-ink-100 px-4 py-3 text-sm text-ink-500 dark:border-ink-800 dark:text-ink-400">
-                Seating capacity: <span className="font-semibold text-ink-700 dark:text-ink-200">{selected.seats}</span> (auto-filled from model)
-              </div>
-
-              <div className="flex gap-3">
+              <div className="flex gap-3 mt-2">
                 <Button type="button" variant="secondary" className="flex-1" onClick={() => setAdding(false)}>
                   Cancel
                 </Button>
