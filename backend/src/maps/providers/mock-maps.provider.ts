@@ -11,7 +11,9 @@ export class MockMapsProvider implements MapProvider {
     // Haversine distance approximation
     const dLat = destLat - originLat;
     const dLng = destLng - originLng;
-    const distanceMeters = Math.round(Math.sqrt(dLat * dLat + dLng * dLng) * 111000); // 1 degree lat is ~111km
+    const distanceMeters = Math.round(
+      Math.sqrt(dLat * dLat + dLng * dLng) * 111000,
+    ); // 1 degree lat is ~111km
 
     // Assume average speed 45 km/h (12.5 m/s)
     const durationSeconds = Math.round(distanceMeters / 12.5);

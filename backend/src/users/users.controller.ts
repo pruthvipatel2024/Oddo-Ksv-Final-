@@ -8,7 +8,12 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateUserStatusDto } from './dto/update-status.dto';
@@ -48,7 +53,9 @@ export class UsersController {
     const user = await this.usersService.update(
       currentUser.sub,
       dto,
-      currentUser.role === UserRole.SUPER_ADMIN ? undefined : currentUser.organizationId || undefined,
+      currentUser.role === UserRole.SUPER_ADMIN
+        ? undefined
+        : currentUser.organizationId || undefined,
     );
     const { passwordHash, refreshTokenHash, ...cleanUser } = user as any;
     return { success: true, data: cleanUser };
@@ -81,7 +88,8 @@ export class UsersController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Employee dashboard',
-    description: 'Returns upcoming bookings, offered rides, and vehicle list for the current employee.',
+    description:
+      'Returns upcoming bookings, offered rides, and vehicle list for the current employee.',
   })
   @ApiResponse({ status: 200, description: 'Employee dashboard data.' })
   async employeeDashboard(@CurrentUser() currentUser: JwtPayload) {
@@ -98,18 +106,27 @@ export class UsersController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Organization admin dashboard',
-    description: 'Returns employee counts, carbon savings, pending vehicle approvals, and recent ride history.',
+    description:
+      'Returns employee counts, carbon savings, pending vehicle approvals, and recent ride history.',
   })
   @ApiResponse({ status: 200, description: 'Org-admin dashboard data.' })
-  @ApiResponse({ status: 403, description: 'Forbidden – requires ORGANIZATION_ADMIN or SUPER_ADMIN role.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden – requires ORGANIZATION_ADMIN or SUPER_ADMIN role.',
+  })
   async orgAdminDashboard(@CurrentUser() currentUser: JwtPayload) {
     if (
       currentUser.role !== UserRole.ORGANIZATION_ADMIN &&
       currentUser.role !== UserRole.SUPER_ADMIN
     ) {
-      throw new ForbiddenException('Org admin dashboard is restricted to ORGANIZATION_ADMIN and SUPER_ADMIN roles');
+      throw new ForbiddenException(
+        'Org admin dashboard is restricted to ORGANIZATION_ADMIN and SUPER_ADMIN roles',
+      );
     }
-    const orgId = currentUser.organizationId!;
+    const orgId =
+      currentUser.role === UserRole.SUPER_ADMIN
+        ? undefined
+        : currentUser.organizationId || undefined;
     return {
       success: true,
       data: await this.usersService.getOrgAdminDashboard(orgId),
@@ -123,13 +140,19 @@ export class UsersController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Super admin platform dashboard',
-    description: 'Returns platform-wide aggregates: total orgs, employees, trips, revenue, and commission.',
+    description:
+      'Returns platform-wide aggregates: total orgs, employees, trips, revenue, and commission.',
   })
   @ApiResponse({ status: 200, description: 'Super admin dashboard data.' })
-  @ApiResponse({ status: 403, description: 'Forbidden – requires SUPER_ADMIN role.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden – requires SUPER_ADMIN role.',
+  })
   async superAdminDashboard(@CurrentUser() currentUser: JwtPayload) {
     if (currentUser.role !== UserRole.SUPER_ADMIN) {
-      throw new ForbiddenException('Super admin dashboard is restricted to SUPER_ADMIN role');
+      throw new ForbiddenException(
+        'Super admin dashboard is restricted to SUPER_ADMIN role',
+      );
     }
     return {
       success: true,
@@ -143,11 +166,15 @@ export class UsersController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Get user profile by ID',
-    description: 'Retrieves any verified user profile in the marketplace. Passwords are never returned.',
+    description:
+      'Retrieves any verified user profile in the marketplace. Passwords are never returned.',
   })
   @ApiResponse({ status: 200, description: 'Return user details.' })
   @ApiResponse({ status: 404, description: 'User not found.' })
-  async findOne(@Param('id') id: string, @CurrentUser() currentUser: JwtPayload) {
+  async findOne(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: JwtPayload,
+  ) {
     // SUPER_ADMIN can see anyone; others can look up any user (marketplace is global)
     const user = await this.usersService.findById(id);
     const { passwordHash, refreshTokenHash, ...cleanUser } = user as any;
@@ -157,12 +184,18 @@ export class UsersController {
   @Get()
   @Roles(UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'List all organization employees', description: 'Restricted to Admins. Scopes result to requester\'s org.' })
+  @ApiOperation({
+    summary: 'List all organization employees',
+    description: "Restricted to Admins. Scopes result to requester's org.",
+  })
   @ApiResponse({ status: 200, description: 'Return array of employees.' })
   async findAll(@CurrentUser() currentUser: JwtPayload) {
-    const orgId = currentUser.role === UserRole.SUPER_ADMIN ? undefined : currentUser.organizationId || undefined;
+    const orgId =
+      currentUser.role === UserRole.SUPER_ADMIN
+        ? undefined
+        : currentUser.organizationId || undefined;
     const users = await this.usersService.findAll(orgId);
-    
+
     // Strip passwords and tokens
     const cleanUsers = users.map((user) => {
       const { passwordHash, refreshTokenHash, ...clean } = user as any;
@@ -175,14 +208,23 @@ export class UsersController {
   @Patch(':id/status')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Suspend or activate an employee profile', description: 'Restricted to Admins.' })
-  @ApiResponse({ status: 200, description: 'User status updated successfully.' })
+  @ApiOperation({
+    summary: 'Suspend or activate an employee profile',
+    description: 'Restricted to Admins.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User status updated successfully.',
+  })
   async updateStatus(
     @Param('id') id: string,
     @Body() dto: UpdateUserStatusDto,
     @CurrentUser() admin: JwtPayload,
   ) {
-    const orgId = admin.role === UserRole.SUPER_ADMIN ? undefined : admin.organizationId || undefined;
+    const orgId =
+      admin.role === UserRole.SUPER_ADMIN
+        ? undefined
+        : admin.organizationId || undefined;
     const user = await this.usersService.updateStatus(id, dto.status, orgId);
     const { passwordHash, refreshTokenHash, ...cleanUser } = user as any;
     return { success: true, data: cleanUser };

@@ -24,9 +24,26 @@ export class VehiclesRepository extends BaseRepository<Vehicle> {
   /**
    * Find a vehicle by registration number.
    */
-  async findByRegistrationNumber(registrationNumber: string): Promise<Vehicle | null> {
+  async findByRegistrationNumber(
+    registrationNumber: string,
+  ): Promise<Vehicle | null> {
     return this.prisma.vehicle.findUnique({
       where: { registrationNumber },
+    });
+  }
+
+  /**
+   * Find all vehicles, optionally filtered by organization, and include owner.
+   */
+  async findAllWithOwners(organizationId?: string): Promise<any[]> {
+    return this.prisma.vehicle.findMany({
+      where: {
+        deletedAt: null,
+        ...(organizationId ? { owner: { organizationId } } : {}),
+      },
+      include: {
+        owner: true,
+      },
     });
   }
 }

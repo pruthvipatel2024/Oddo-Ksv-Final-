@@ -1,4 +1,8 @@
-import { ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
@@ -28,9 +32,13 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       const parts = authHeader.split(' ');
       if (parts.length === 2 && parts[0].toLowerCase() === 'bearer') {
         const token = parts[1];
-        const isBlacklisted = await this.redisService.exists(`blacklist:${token}`);
+        const isBlacklisted = await this.redisService.exists(
+          `blacklist:${token}`,
+        );
         if (isBlacklisted) {
-          throw new UnauthorizedException('Token has been revoked. Please log in again.');
+          throw new UnauthorizedException(
+            'Token has been revoked. Please log in again.',
+          );
         }
       }
     }

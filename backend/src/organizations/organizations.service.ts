@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { Organization, Prisma } from '@prisma/client';
 import { OrganizationsRepository } from './organizations.repository';
 
@@ -49,7 +53,10 @@ export class OrganizationsService {
   /**
    * Update settings (such as cost per km or fuel costs).
    */
-  async update(id: string, data: Prisma.OrganizationUpdateInput): Promise<Organization> {
+  async update(
+    id: string,
+    data: Prisma.OrganizationUpdateInput,
+  ): Promise<Organization> {
     return this.orgsRepository.update(id, data);
   }
 }

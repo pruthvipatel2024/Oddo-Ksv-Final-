@@ -39,7 +39,9 @@ async function bootstrap() {
   // Swagger Documentation Setup
   const config = new DocumentBuilder()
     .setTitle('Enterprise Carpooling Platform API')
-    .setDescription('The API documentation for the Enterprise Carpooling Platform.')
+    .setDescription(
+      'The API documentation for the Enterprise Carpooling Platform.',
+    )
     .setVersion('1.0')
     .addBearerAuth(
       {
@@ -53,14 +55,15 @@ async function bootstrap() {
       'JWT-auth', // This name will be referenced in controller endpoints using @ApiBearerAuth('JWT-auth')
     )
     .build();
-  
+
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}/api/v1`);
-  console.log(`Swagger documentation available at: http://localhost:${port}/api/docs`);
+  console.log(
+    `Swagger documentation available at: http://localhost:${port}/api/docs`,
+  );
 }
 bootstrap();
-

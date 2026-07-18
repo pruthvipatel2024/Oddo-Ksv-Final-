@@ -21,7 +21,9 @@ export class ChatRepository extends BaseRepository<Message> {
   /**
    * Find message history for a specific conversation, ordered chronologically.
    */
-  async findMessagesByConversationId(conversationId: string): Promise<Message[]> {
+  async findMessagesByConversationId(
+    conversationId: string,
+  ): Promise<Message[]> {
     return this.prisma.message.findMany({
       where: { conversationId },
       orderBy: { createdAt: 'asc' },
@@ -41,7 +43,11 @@ export class ChatRepository extends BaseRepository<Message> {
   /**
    * Create a new message in database.
    */
-  async createMessage(conversationId: string, senderId: string, content: string): Promise<Message> {
+  async createMessage(
+    conversationId: string,
+    senderId: string,
+    content: string,
+  ): Promise<Message> {
     return this.prisma.message.create({
       data: {
         conversationId,

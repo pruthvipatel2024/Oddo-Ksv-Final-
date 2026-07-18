@@ -24,7 +24,14 @@ export class LoggingInterceptor implements NestInterceptor {
 
     // Sanitize request log info (do not log sensitive body properties)
     const sanitizedBody = { ...request.body };
-    const sensitiveKeys = ['password', 'passwordHash', 'token', 'refreshToken', 'accessToken', 'secret'];
+    const sensitiveKeys = [
+      'password',
+      'passwordHash',
+      'token',
+      'refreshToken',
+      'accessToken',
+      'secret',
+    ];
     sensitiveKeys.forEach((key) => {
       if (key in sanitizedBody) {
         sanitizedBody[key] = '***';

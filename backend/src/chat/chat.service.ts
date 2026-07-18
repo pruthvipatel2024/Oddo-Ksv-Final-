@@ -23,19 +23,29 @@ export class ChatService {
   async getConversation(tripId: string, userId: string): Promise<Conversation> {
     // 1. Verify trip and participant membership
     const trip = await this.tripsService.findById(tripId);
-    const isParticipant = trip.participants.some((p: any) => p.userId === userId);
+    const isParticipant = trip.participants.some(
+      (p: any) => p.userId === userId,
+    );
 
     if (!isParticipant && userId !== 'SUPER_ADMIN') {
-      throw new ForbiddenException('You are not authorized to access chat history for this trip');
+      throw new ForbiddenException(
+        'You are not authorized to access chat history for this trip',
+      );
     }
 
     // 2. Restrict chat access strictly to active trip windows (BOOKED, STARTED, IN_PROGRESS)
-    if (trip.status === TripStatus.COMPLETED || trip.status === TripStatus.CANCELLED) {
-      throw new ForbiddenException('Chat room is archived because the trip is completed or cancelled');
+    if (
+      trip.status === TripStatus.COMPLETED ||
+      trip.status === TripStatus.CANCELLED
+    ) {
+      throw new ForbiddenException(
+        'Chat room is archived because the trip is completed or cancelled',
+      );
     }
 
     // 3. Fetch or create conversation
-    let conversation = await this.chatRepository.findConversationByTripId(tripId);
+    let conversation =
+      await this.chatRepository.findConversationByTripId(tripId);
     if (!conversation) {
       conversation = await this.chatRepository.createConversation(tripId);
     }
@@ -54,7 +64,11 @@ export class ChatService {
   /**
    * Save a message and return the created record with sender info.
    */
-  async saveMessage(conversationId: string, senderId: string, content: string): Promise<Message> {
+  async saveMessage(
+    conversationId: string,
+    senderId: string,
+    content: string,
+  ): Promise<Message> {
     return this.chatRepository.createMessage(conversationId, senderId, content);
   }
 }

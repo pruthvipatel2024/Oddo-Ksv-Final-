@@ -4,14 +4,19 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
   private static pool: Pool;
   private static adapter: PrismaPg;
 
   constructor() {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
-      throw new Error('DATABASE_URL is not defined in the environment variables');
+      throw new Error(
+        'DATABASE_URL is not defined in the environment variables',
+      );
     }
 
     const pool = new Pool({ connectionString });

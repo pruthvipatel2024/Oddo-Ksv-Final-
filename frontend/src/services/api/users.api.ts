@@ -36,4 +36,10 @@ export const usersApi = {
 
   changePassword: (payload: any) => 
     apiClient.patch<{ success: boolean; message: string }>('/users/change-password', payload),
+
+  findAll: () => 
+    apiClient.get<{ success: boolean; data: UserProfile[] }>('/users'),
+
+  updateStatus: (id: string, status: 'ACTIVE' | 'SUSPENDED' | 'PENDING') => 
+    apiClient.patch<{ success: boolean; data: UserProfile }>(`/users/${id}/status`, { status }),
 };

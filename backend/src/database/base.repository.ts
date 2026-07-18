@@ -36,7 +36,10 @@ export abstract class BaseRepository<T> {
   /**
    * Find first record matching standard criteria.
    */
-  async findFirst(whereClause: any, organizationId?: string): Promise<T | null> {
+  async findFirst(
+    whereClause: any,
+    organizationId?: string,
+  ): Promise<T | null> {
     const where = this.applyTenantFilter(whereClause, organizationId);
     return this.modelDelegate.findFirst({ where });
   }

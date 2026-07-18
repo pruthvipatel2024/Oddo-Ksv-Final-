@@ -24,7 +24,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const resContent = exception.getResponse();
-      
+
       if (typeof resContent === 'object' && resContent !== null) {
         message = (resContent as any).message || exception.message;
         details = (resContent as any).error || null;
@@ -42,7 +42,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
     // Log the error (but avoid logging sensitive fields)
     this.logger.error(
       `${request.method} ${request.url} - Status: ${status} - Error: ${
-        exception instanceof Error ? exception.message : JSON.stringify(exception)
+        exception instanceof Error
+          ? exception.message
+          : JSON.stringify(exception)
       }`,
       exception instanceof Error ? exception.stack : undefined,
     );

@@ -1,5 +1,10 @@
 import { Controller, Get, Post, Param, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { RatingsService } from './ratings.service';
 import { CreateRatingDto } from './dto/create-rating.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -15,7 +20,11 @@ export class RatingsController {
 
   @Post()
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Submit a driver or passenger review', description: 'Can only be submitted for completed trips. Duplicate ratings are rejected.' })
+  @ApiOperation({
+    summary: 'Submit a driver or passenger review',
+    description:
+      'Can only be submitted for completed trips. Duplicate ratings are rejected.',
+  })
   @ApiResponse({ status: 201, description: 'Rating recorded.' })
   @ApiResponse({ status: 400, description: 'Invalid trip or participants.' })
   @ApiResponse({ status: 409, description: 'Conflict. Rating already exists.' })
@@ -28,7 +37,10 @@ export class RatingsController {
 
   @Get('user/:userId')
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Get user reviews and average rating score', description: 'Retrieves calculated average rating and review entries.' })
+  @ApiOperation({
+    summary: 'Get user reviews and average rating score',
+    description: 'Retrieves calculated average rating and review entries.',
+  })
   @ApiResponse({ status: 200, description: 'Return reviews and score.' })
   async findUserRatings(@Param('userId') userId: string) {
     const [averageRating, reviews] = await Promise.all([
@@ -47,7 +59,10 @@ export class RatingsController {
 
   @Get('my-reviews')
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'List reviews received by the current user', description: 'Returns all reviews logged for the user.' })
+  @ApiOperation({
+    summary: 'List reviews received by the current user',
+    description: 'Returns all reviews logged for the user.',
+  })
   @ApiResponse({ status: 200, description: 'Return reviews list.' })
   async getMyReviews(@CurrentUser() user: JwtPayload) {
     const [averageRating, reviews] = await Promise.all([

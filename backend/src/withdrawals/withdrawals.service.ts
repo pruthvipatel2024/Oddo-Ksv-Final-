@@ -4,7 +4,11 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { WithdrawalRequest, WithdrawalStatus, TransactionType } from '@prisma/client';
+import {
+  WithdrawalRequest,
+  WithdrawalStatus,
+  TransactionType,
+} from '@prisma/client';
 import { WithdrawalsRepository } from './withdrawals.repository';
 import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
 import { UpdateWithdrawalDto } from './dto/update-withdrawal.dto';
@@ -24,7 +28,10 @@ export class WithdrawalsService {
   /**
    * Create a withdrawal request and debit the driver's available wallet balance.
    */
-  async create(userId: string, dto: CreateWithdrawalDto): Promise<WithdrawalRequest> {
+  async create(
+    userId: string,
+    dto: CreateWithdrawalDto,
+  ): Promise<WithdrawalRequest> {
     return this.prisma.$transaction(async (tx) => {
       // 1. Fetch wallet
       const wallet = await tx.wallet.findUnique({ where: { userId } });
@@ -35,7 +42,9 @@ export class WithdrawalsService {
       // 2. Validate balance
       const balance = Number(wallet.availableBalance);
       if (balance < dto.amount) {
-        throw new BadRequestException('Insufficient wallet balance for withdrawal');
+        throw new BadRequestException(
+          'Insufficient wallet balance for withdrawal',
+        );
       }
 
       // 3. Deduct from available balance
@@ -65,7 +74,9 @@ export class WithdrawalsService {
         },
       });
 
-      this.logger.log(`User ${userId} requested withdrawal of ${dto.amount}. Wallet debited.`);
+      this.logger.log(
+        `User ${userId} requested withdrawal of ${dto.amount}. Wallet debited.`,
+      );
       return request;
     });
   }
@@ -73,21 +84,34 @@ export class WithdrawalsService {
   /**
    * Process withdrawal request (Approve, Complete, or Reject with refund).
    */
-  async updateStatus(id: string, dto: UpdateWithdrawalDto): Promise<WithdrawalRequest> {
+  async updateStatus(
+    id: string,
+    dto: UpdateWithdrawalDto,
+  ): Promise<WithdrawalRequest> {
     const request = await this.withdrawalsRepository.findById(id);
-    
-    if (request.status === WithdrawalStatus.COMPLETED || request.status === WithdrawalStatus.REJECTED) {
-      throw new BadRequestException('Withdrawal request is already in a terminal state');
+
+    if (
+      request.status === WithdrawalStatus.COMPLETED ||
+      request.status === WithdrawalStatus.REJECTED
+    ) {
+      throw new BadRequestException(
+        'Withdrawal request is already in a terminal state',
+      );
     }
 
     return this.prisma.$transaction(async (tx) => {
       // If rejecting, refund the money back to the user's wallet
       if (dto.status === WithdrawalStatus.REJECTED) {
-        const wallet = await tx.wallet.findUnique({ where: { userId: request.userId } });
+        const wallet = await tx.wallet.findUnique({
+          where: { userId: request.userId },
+        });
         if (wallet) {
           await tx.wallet.update({
             where: { id: wallet.id },
-            data: { availableBalance: Number(wallet.availableBalance) + Number(request.amount) },
+            data: {
+              availableBalance:
+                Number(wallet.availableBalance) + Number(request.amount),
+            },
           });
 
           await tx.walletTransaction.create({
@@ -106,11 +130,14 @@ export class WithdrawalsService {
         where: { id },
         data: {
           status: dto.status,
-          transactionReference: dto.transactionReference || request.transactionReference,
+          transactionReference:
+            dto.transactionReference || request.transactionReference,
         },
       });
 
-      this.logger.log(`Withdrawal request #${id} updated to status: ${dto.status}`);
+      this.logger.log(
+        `Withdrawal request #${id} updated to status: ${dto.status}`,
+      );
       return updated;
     });
   }

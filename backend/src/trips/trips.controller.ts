@@ -1,11 +1,10 @@
+import { Controller, Get, Patch, Param, Body } from '@nestjs/common';
 import {
-  Controller,
-  Get,
-  Patch,
-  Param,
-  Body,
-} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { TripsService } from './trips.service';
 import { UpdateTripStatusDto } from './dto/update-trip-status.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -21,7 +20,11 @@ export class TripsController {
 
   @Get()
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'List user trips', description: 'Returns all trips the current user participates in (as driver or passenger).' })
+  @ApiOperation({
+    summary: 'List user trips',
+    description:
+      'Returns all trips the current user participates in (as driver or passenger).',
+  })
   @ApiResponse({ status: 200, description: 'Return array of user trips.' })
   async findMyTrips(@CurrentUser() user: JwtPayload) {
     return {
@@ -32,8 +35,14 @@ export class TripsController {
 
   @Get(':id')
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Get detailed trip info by ID', description: 'Access is limited to trip participants or Admins.' })
-  @ApiResponse({ status: 200, description: 'Return detailed trip information.' })
+  @ApiOperation({
+    summary: 'Get detailed trip info by ID',
+    description: 'Access is limited to trip participants or Admins.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Return detailed trip information.',
+  })
   @ApiResponse({ status: 404, description: 'Trip not found.' })
   async findOne(@Param('id') id: string) {
     return {
@@ -44,8 +53,15 @@ export class TripsController {
 
   @Patch(':id/status')
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Transition trip status state', description: 'Enforces the trip state machine. Only the driver is allowed to start, complete, or cancel a trip.' })
-  @ApiResponse({ status: 200, description: 'Trip status updated successfully.' })
+  @ApiOperation({
+    summary: 'Transition trip status state',
+    description:
+      'Enforces the trip state machine. Only the driver is allowed to start, complete, or cancel a trip.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Trip status updated successfully.',
+  })
   @ApiResponse({ status: 400, description: 'Invalid state transition.' })
   @ApiResponse({ status: 403, description: 'Forbidden if not the driver.' })
   async updateStatus(
@@ -55,11 +71,7 @@ export class TripsController {
   ) {
     return {
       success: true,
-      data: await this.tripsService.updateStatus(
-        id,
-        user.sub,
-        dto,
-      ),
+      data: await this.tripsService.updateStatus(id, user.sub, dto),
     };
   }
 }

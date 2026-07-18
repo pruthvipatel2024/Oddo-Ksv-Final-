@@ -7,7 +7,12 @@ import {
   Body,
   ForbiddenException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
@@ -27,11 +32,24 @@ export class BookingsController {
   @Post()
   @Roles(UserRole.EMPLOYEE)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Request a ride booking', description: 'Restricted to Passengers. Creates a reservation request that the driver can approve.' })
+  @ApiOperation({
+    summary: 'Request a ride booking',
+    description:
+      'Restricted to Passengers. Creates a reservation request that the driver can approve.',
+  })
   @ApiResponse({ status: 201, description: 'Booking request registered.' })
-  @ApiResponse({ status: 400, description: 'Bad Request. Drivers cannot book their own rides.' })
-  @ApiResponse({ status: 409, description: 'Conflict. Active booking request already exists.' })
-  async create(@CurrentUser() passenger: JwtPayload, @Body() dto: CreateBookingDto) {
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request. Drivers cannot book their own rides.',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflict. Active booking request already exists.',
+  })
+  async create(
+    @CurrentUser() passenger: JwtPayload,
+    @Body() dto: CreateBookingDto,
+  ) {
     return {
       success: true,
       data: await this.bookingsService.create(passenger.sub, dto),
@@ -41,8 +59,15 @@ export class BookingsController {
   @Get()
   @Roles(UserRole.EMPLOYEE)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'List passenger bookings', description: 'Returns a history of booking requests made by the current user.' })
-  @ApiResponse({ status: 200, description: 'Return array of passenger bookings.' })
+  @ApiOperation({
+    summary: 'List passenger bookings',
+    description:
+      'Returns a history of booking requests made by the current user.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Return array of passenger bookings.',
+  })
   async findAll(@CurrentUser() user: JwtPayload) {
     return {
       success: true,
@@ -53,10 +78,19 @@ export class BookingsController {
   @Get('ride/:rideId')
   @Roles(UserRole.EMPLOYEE)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'List bookings for a specific ride', description: 'Restricted to the driver who published the ride.' })
+  @ApiOperation({
+    summary: 'List bookings for a specific ride',
+    description: 'Restricted to the driver who published the ride.',
+  })
   @ApiResponse({ status: 200, description: 'Return array of bookings.' })
-  @ApiResponse({ status: 403, description: 'Forbidden if not the ride publisher.' })
-  async findByRide(@Param('rideId') rideId: string, @CurrentUser() driver: JwtPayload) {
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden if not the ride publisher.',
+  })
+  async findByRide(
+    @Param('rideId') rideId: string,
+    @CurrentUser() driver: JwtPayload,
+  ) {
     return {
       success: true,
       data: await this.bookingsService.findByRide(rideId, driver.sub),
@@ -65,7 +99,10 @@ export class BookingsController {
 
   @Get(':id')
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Get booking details by ID', description: 'Retrieves specific booking details.' })
+  @ApiOperation({
+    summary: 'Get booking details by ID',
+    description: 'Retrieves specific booking details.',
+  })
   @ApiResponse({ status: 200, description: 'Return booking details.' })
   @ApiResponse({ status: 404, description: 'Booking not found.' })
   async findOne(@Param('id') id: string) {
@@ -77,10 +114,20 @@ export class BookingsController {
 
   @Patch(':id/status')
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Update booking status', description: 'Allows drivers to approve or reject requests, and passengers/drivers to cancel confirmed reservations.' })
-  @ApiResponse({ status: 200, description: 'Booking status updated successfully.' })
+  @ApiOperation({
+    summary: 'Update booking status',
+    description:
+      'Allows drivers to approve or reject requests, and passengers/drivers to cancel confirmed reservations.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Booking status updated successfully.',
+  })
   @ApiResponse({ status: 400, description: 'Invalid state transitions.' })
-  @ApiResponse({ status: 403, description: 'Forbidden if requester is not authorized.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden if requester is not authorized.',
+  })
   async updateStatus(
     @Param('id') id: string,
     @CurrentUser() user: JwtPayload,
@@ -88,11 +135,7 @@ export class BookingsController {
   ) {
     return {
       success: true,
-      data: await this.bookingsService.updateStatus(
-        id,
-        user.sub,
-        dto,
-      ),
+      data: await this.bookingsService.updateStatus(id, user.sub, dto),
     };
   }
 }

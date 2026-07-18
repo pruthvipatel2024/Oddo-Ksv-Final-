@@ -36,22 +36,31 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
    */
   async handleConnection(client: Socket) {
     try {
-      const authHeader = client.handshake.headers.authorization || client.handshake.auth?.token;
+      const authHeader =
+        client.handshake.headers.authorization || client.handshake.auth?.token;
       if (!authHeader) {
-        this.logger.warn(`Chat client unauthenticated: disconnecting ${client.id}`);
+        this.logger.warn(
+          `Chat client unauthenticated: disconnecting ${client.id}`,
+        );
         client.disconnect(true);
         return;
       }
 
-      const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
+      const token = authHeader.startsWith('Bearer ')
+        ? authHeader.split(' ')[1]
+        : authHeader;
       const payload = this.jwtService.verify(token, {
         secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
       });
 
       client.data.user = payload;
-      this.logger.log(`Chat client connected: ${client.id} (User: ${payload.email})`);
+      this.logger.log(
+        `Chat client connected: ${client.id} (User: ${payload.email})`,
+      );
     } catch (err) {
-      this.logger.warn(`Chat authentication failed for client ${client.id}: ${err.message}`);
+      this.logger.warn(
+        `Chat authentication failed for client ${client.id}: ${err.message}`,
+      );
       client.disconnect(true);
     }
   }
@@ -83,7 +92,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const roomName = `conversation:${conversation.id}`;
       await client.join(roomName);
-      
+
       this.logger.log(`User ${user.email} joined chat room: ${roomName}`);
       client.emit('joinedConversation', { conversationId: conversation.id });
     } catch (err) {

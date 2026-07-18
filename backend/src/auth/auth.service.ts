@@ -74,7 +74,9 @@ export class AuthService {
       return user;
     });
 
-    this.logger.log(`User registered successfully: ${newUser.email} under Organization: ${org.name}`);
+    this.logger.log(
+      `User registered successfully: ${newUser.email} under Organization: ${org.name}`,
+    );
 
     // Expose clean data without password hash
     const { passwordHash: _, refreshTokenHash: __, ...cleanUser } = newUser;
@@ -87,7 +89,10 @@ export class AuthService {
   /**
    * Log in user and generate JWT tokens.
    */
-  async login(dto: LoginDto): Promise<{ success: boolean; data: { accessToken: string; refreshToken: string; user: any } }> {
+  async login(dto: LoginDto): Promise<{
+    success: boolean;
+    data: { accessToken: string; refreshToken: string; user: any };
+  }> {
     const user = await this.usersService.findByEmail(dto.email);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -97,14 +102,17 @@ export class AuthService {
       throw new UnauthorizedException('Your account has been suspended');
     }
 
-    const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
+    const isPasswordValid = await bcrypt.compare(
+      dto.password,
+      user.passwordHash,
+    );
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
     // Generate token set
     const tokens = await this.generateTokens(user);
-    
+
     // Save refresh token hash in DB
     const refreshTokenHash = await bcrypt.hash(tokens.refreshToken, 10);
     await this.usersService.updateRefreshToken(user.id, refreshTokenHash);
@@ -128,18 +136,31 @@ export class AuthService {
   /**
    * Rotate access & refresh tokens using a valid refresh token.
    */
-  async refresh(refreshToken: string): Promise<{ success: boolean; data: { accessToken: string; refreshToken: string } }> {
+  async refresh(refreshToken: string): Promise<{
+    success: boolean;
+    data: { accessToken: string; refreshToken: string };
+  }> {
     try {
-      const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
-      const payload: JwtPayload = this.jwtService.verify(refreshToken, { secret: refreshSecret });
+      const refreshSecret =
+        this.configService.get<string>('JWT_REFRESH_SECRET');
+      const payload: JwtPayload = this.jwtService.verify(refreshToken, {
+        secret: refreshSecret,
+      });
 
       const user = await this.usersService.findById(payload.sub);
-      if (!user || !user.refreshTokenHash || user.status === UserStatus.SUSPENDED) {
+      if (
+        !user ||
+        !user.refreshTokenHash ||
+        user.status === UserStatus.SUSPENDED
+      ) {
         throw new UnauthorizedException('Invalid or revoked session');
       }
 
       // Validate refresh token hash
-      const isMatched = await bcrypt.compare(refreshToken, user.refreshTokenHash);
+      const isMatched = await bcrypt.compare(
+        refreshToken,
+        user.refreshTokenHash,
+      );
       if (!isMatched) {
         throw new UnauthorizedException('Invalid or revoked session');
       }
@@ -163,20 +184,29 @@ export class AuthService {
   /**
    * Log out user, clear refresh token hash, and blacklist current access token in Redis.
    */
-  async logout(userId: string, accessToken: string): Promise<{ success: boolean; message: string }> {
+  async logout(
+    userId: string,
+    accessToken: string,
+  ): Promise<{ success: boolean; message: string }> {
     // 1. Clear refresh token hash
     await this.usersService.updateRefreshToken(userId, null);
 
     // 2. Extract expiration of access token to blacklist it for the remaining time
     try {
       const accessSecret = this.configService.get<string>('JWT_ACCESS_SECRET');
-      const decoded = this.jwtService.verify(accessToken, { secret: accessSecret });
+      const decoded = this.jwtService.verify(accessToken, {
+        secret: accessSecret,
+      });
       const now = Math.floor(Date.now() / 1000);
       const remainingSeconds = decoded.exp - now;
 
       if (remainingSeconds > 0) {
         // Add to Redis blacklist
-        await this.redisService.set(`blacklist:${accessToken}`, 'true', remainingSeconds);
+        await this.redisService.set(
+          `blacklist:${accessToken}`,
+          'true',
+          remainingSeconds,
+        );
       }
     } catch (err) {
       // Token is already expired or invalid, blacklist isn't strictly required
@@ -193,7 +223,9 @@ export class AuthService {
   /**
    * Helper to build access and refresh tokens.
    */
-  private async generateTokens(user: User): Promise<{ accessToken: string; refreshToken: string }> {
+  private async generateTokens(
+    user: User,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
@@ -204,12 +236,18 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
-      expiresIn: this.configService.get<string>('JWT_ACCESS_EXPIRATION', '15m') as any,
+      expiresIn: this.configService.get<string>(
+        'JWT_ACCESS_EXPIRATION',
+        '15m',
+      ) as any,
     });
 
     const refreshToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRATION', '7d') as any,
+      expiresIn: this.configService.get<string>(
+        'JWT_REFRESH_EXPIRATION',
+        '7d',
+      ) as any,
     });
 
     return { accessToken, refreshToken };

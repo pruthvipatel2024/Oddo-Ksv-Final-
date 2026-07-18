@@ -45,20 +45,31 @@ export class RidesService {
   /**
    * Offer / Publish a new ride.
    */
-  async create(driverId: string, organizationId: string, dto: CreateRideDto): Promise<Ride> {
+  async create(
+    driverId: string,
+    organizationId: string,
+    dto: CreateRideDto,
+  ): Promise<Ride> {
     // 1. Verify driver has registered the vehicle and it is active & verified
-    const vehicle = await this.vehiclesService.findByIdScoped(dto.vehicleId, organizationId);
-    
+    const vehicle = await this.vehiclesService.findByIdScoped(
+      dto.vehicleId,
+      organizationId,
+    );
+
     if (vehicle.ownerId !== driverId) {
       throw new ForbiddenException('You do not own this vehicle');
     }
 
     if (!vehicle.isActive) {
-      throw new BadRequestException('This vehicle is currently marked inactive');
+      throw new BadRequestException(
+        'This vehicle is currently marked inactive',
+      );
     }
 
     if (vehicle.verificationStatus !== VehicleVerificationStatus.VERIFIED) {
-      throw new BadRequestException('Vehicle must be verified by admin before offering rides');
+      throw new BadRequestException(
+        'Vehicle must be verified by admin before offering rides',
+      );
     }
 
     // 2. Enforce seating capacity constraint
@@ -133,14 +144,18 @@ export class RidesService {
    */
   async search(dto: SearchRideDto): Promise<any[]> {
     const travelDate = new Date(dto.date);
-    
+
     // Fetch all open rides on that date globally
-    const openRides = await this.ridesRepository.findMatchingRides(travelDate, RideStatus.OPEN);
+    const openRides = await this.ridesRepository.findMatchingRides(
+      travelDate,
+      RideStatus.OPEN,
+    );
 
     // Compute target departure total minutes from midnight
     const searchDateTime = new Date(dto.date);
     const searchHours = searchDateTime.getUTCHours();
-    const searchMinutesTotal = searchHours * 60 + searchDateTime.getUTCMinutes();
+    const searchMinutesTotal =
+      searchHours * 60 + searchDateTime.getUTCMinutes();
 
     const matches: any[] = [];
 
@@ -158,7 +173,9 @@ export class RidesService {
 
       // 3. Check vehicle type constraint
       if (dto.vehicleType && ride.vehicleType) {
-        const vehicleMatch = ride.vehicleType.toLowerCase().includes(dto.vehicleType.toLowerCase());
+        const vehicleMatch = ride.vehicleType
+          .toLowerCase()
+          .includes(dto.vehicleType.toLowerCase());
         if (!vehicleMatch) {
           continue;
         }
@@ -200,7 +217,9 @@ export class RidesService {
       }
 
       // 7. Get driver average rating
-      const driverRating = await this.ratingsService.getAverageRating(ride.driverId);
+      const driverRating = await this.ratingsService.getAverageRating(
+        ride.driverId,
+      );
       if (dto.minDriverRating && driverRating < dto.minDriverRating) {
         continue;
       }
@@ -244,8 +263,13 @@ export class RidesService {
       throw new BadRequestException('This ride is already cancelled');
     }
 
-    if (ride.status === RideStatus.COMPLETED || ride.status === RideStatus.STARTED) {
-      throw new BadRequestException('Cannot cancel a ride that has already started or completed');
+    if (
+      ride.status === RideStatus.COMPLETED ||
+      ride.status === RideStatus.STARTED
+    ) {
+      throw new BadRequestException(
+        'Cannot cancel a ride that has already started or completed',
+      );
     }
 
     return this.ridesRepository.update(id, { status: RideStatus.CANCELLED });
@@ -254,7 +278,12 @@ export class RidesService {
   /**
    * Helper utility calculating geographic distance in meters between two coordinates.
    */
-  private haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  private haversineDistance(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+  ): number {
     const R = 6371e3; // Earth radius in meters
     const phi1 = (lat1 * Math.PI) / 180;
     const phi2 = (lat2 * Math.PI) / 180;
@@ -263,7 +292,10 @@ export class RidesService {
 
     const a =
       Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-      Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+      Math.cos(phi1) *
+        Math.cos(phi2) *
+        Math.sin(deltaLambda / 2) *
+        Math.sin(deltaLambda / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c;

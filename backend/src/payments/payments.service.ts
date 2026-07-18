@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  Logger,
+} from '@nestjs/common';
 import { PaymentStatus, BookingStatus, PaymentMethod } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import * as crypto from 'crypto';
@@ -22,7 +27,7 @@ export class PaymentsService {
     }
 
     const orderId = `order_${Math.random().toString(36).substring(2, 15)}`;
-    
+
     return {
       orderId,
       amount: Number(booking.fare) * 100, // in paise/cents
@@ -36,7 +41,7 @@ export class PaymentsService {
    */
   async processWebhook(payload: any, signature: string): Promise<boolean> {
     const secret = process.env.RAZORPAY_KEY_SECRET || 'sandbox_secret';
-    
+
     // Sandbox signature verification check
     const expectedSignature = crypto
       .createHmac('sha256', secret)
@@ -74,7 +79,9 @@ export class PaymentsService {
           },
         });
 
-        this.logger.log(`Webhook captured: Booking #${bookingId} payment escrowed.`);
+        this.logger.log(
+          `Webhook captured: Booking #${bookingId} payment escrowed.`,
+        );
         return true;
       });
     }

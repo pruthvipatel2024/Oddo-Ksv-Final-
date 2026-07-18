@@ -1,4 +1,9 @@
-import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { User, Prisma, UserStatus } from '@prisma/client';
 import { UsersRepository } from './users.repository';
 import { PrismaService } from '../database/prisma.service';
@@ -45,7 +50,11 @@ export class UsersService {
   /**
    * Update a user's details.
    */
-  async update(id: string, data: Prisma.UserUpdateInput, organizationId?: string): Promise<User> {
+  async update(
+    id: string,
+    data: Prisma.UserUpdateInput,
+    organizationId?: string,
+  ): Promise<User> {
     return this.usersRepository.update(id, data, organizationId);
   }
 
@@ -61,27 +70,41 @@ export class UsersService {
   /**
    * Update user status.
    */
-  async updateStatus(id: string, status: UserStatus, organizationId?: string): Promise<User> {
+  async updateStatus(
+    id: string,
+    status: UserStatus,
+    organizationId?: string,
+  ): Promise<User> {
     return this.usersRepository.update(id, { status }, organizationId);
   }
 
   /**
    * Save refresh token hash for user.
    */
-  async updateRefreshToken(id: string, refreshTokenHash: string | null): Promise<void> {
+  async updateRefreshToken(
+    id: string,
+    refreshTokenHash: string | null,
+  ): Promise<void> {
     await this.usersRepository.update(id, { refreshTokenHash });
   }
 
   /**
    * Change user password.
    */
-  async changePassword(id: string, oldPassword: string, newPassword: string): Promise<void> {
+  async changePassword(
+    id: string,
+    oldPassword: string,
+    newPassword: string,
+  ): Promise<void> {
     const user = await this.usersRepository.findById(id);
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    const isPasswordValid = await bcrypt.compare(oldPassword, user.passwordHash);
+    const isPasswordValid = await bcrypt.compare(
+      oldPassword,
+      user.passwordHash,
+    );
     if (!isPasswordValid) {
       throw new BadRequestException('Incorrect current password');
     }
@@ -112,7 +135,9 @@ export class UsersService {
         include: {
           ride: {
             include: {
-              driver: { select: { firstName: true, lastName: true, avatar: true } },
+              driver: {
+                select: { firstName: true, lastName: true, avatar: true },
+              },
             },
           },
         },
@@ -127,7 +152,9 @@ export class UsersService {
         include: {
           bookings: {
             include: {
-              passenger: { select: { firstName: true, lastName: true, avatar: true } },
+              passenger: {
+                select: { firstName: true, lastName: true, avatar: true },
+              },
             },
           },
         },
@@ -149,24 +176,37 @@ export class UsersService {
   /**
    * Retrieve organization admin commute statistics and metrics.
    */
-  async getOrgAdminDashboard(orgId: string) {
-    const [employeeCount, activeDrivers, activePassengers, pendingVehicles, rideHistory] = await Promise.all([
-      this.prisma.user.count({ where: { organizationId: orgId, role: 'EMPLOYEE' } }),
+  async getOrgAdminDashboard(orgId?: string) {
+    const [
+      employeeCount,
+      vehicleCount,
+      activeDrivers,
+      activePassengers,
+      pendingVehicles,
+      rideHistory,
+    ] = await Promise.all([
+      this.prisma.user.count({ where: orgId ? { organizationId: orgId } : {} }),
+      this.prisma.vehicle.count({
+        where: {
+          owner: orgId ? { organizationId: orgId } : {},
+          deletedAt: null,
+        },
+      }),
       this.prisma.user.count({
         where: {
-          organizationId: orgId,
+          ...(orgId ? { organizationId: orgId } : {}),
           ridesAsDriver: { some: {} },
         },
       }),
       this.prisma.user.count({
         where: {
-          organizationId: orgId,
+          ...(orgId ? { organizationId: orgId } : {}),
           bookings: { some: {} },
         },
       }),
       this.prisma.vehicle.findMany({
         where: {
-          owner: { organizationId: orgId },
+          ...(orgId ? { owner: { organizationId: orgId } } : {}),
           verificationStatus: 'PENDING',
         },
         include: {
@@ -174,7 +214,7 @@ export class UsersService {
         },
       }),
       this.prisma.ride.findMany({
-        where: { organizationId: orgId },
+        where: orgId ? { organizationId: orgId } : {},
         include: {
           driver: { select: { firstName: true, lastName: true } },
           vehicle: true,
@@ -184,18 +224,32 @@ export class UsersService {
       }),
     ]);
 
-    const totalRides = await this.prisma.ride.count({ where: { organizationId: orgId, status: 'COMPLETED' } });
-    const totalBookings = await this.prisma.booking.count({ where: { ride: { organizationId: orgId }, status: 'CONFIRMED' } });
-    
+    const totalRides = await this.prisma.ride.count({
+      where: orgId ? { organizationId: orgId } : {},
+    });
+    const totalBookings = await this.prisma.booking.count({
+      where: {
+        ride: orgId ? { organizationId: orgId } : {},
+        status: 'CONFIRMED',
+      },
+    });
+
     const completedTrips = await this.prisma.trip.findMany({
-      where: { ride: { organizationId: orgId }, status: 'COMPLETED' },
+      where: {
+        ride: orgId ? { organizationId: orgId } : {},
+        status: 'COMPLETED',
+      },
       select: { actualDistance: true },
     });
-    const totalDistance = completedTrips.reduce((sum, t) => sum + Number(t.actualDistance || 0), 0);
+    const totalDistance = completedTrips.reduce(
+      (sum, t) => sum + Number(t.actualDistance || 0),
+      0,
+    );
     const carbonSaved = Number((totalDistance * 0.12).toFixed(2));
 
     return {
       employeeCount,
+      vehicleCount,
       activeDrivers,
       activePassengers,
       pendingVehicles,
@@ -213,11 +267,19 @@ export class UsersService {
    * Retrieve platform owner statistics.
    */
   async getSuperAdminDashboard() {
-    const [orgsCount, employeesCount, tripsCount, activeMarketplace, pendingWithdrawals] = await Promise.all([
+    const [
+      orgsCount,
+      employeesCount,
+      tripsCount,
+      activeMarketplace,
+      pendingWithdrawals,
+    ] = await Promise.all([
       this.prisma.organization.count(),
       this.prisma.user.count({ where: { role: 'EMPLOYEE' } }),
       this.prisma.trip.count(),
-      this.prisma.ride.count({ where: { status: { in: ['OPEN', 'FULL', 'STARTED'] } } }),
+      this.prisma.ride.count({
+        where: { status: { in: ['OPEN', 'FULL', 'STARTED'] } },
+      }),
       this.prisma.withdrawalRequest.count({ where: { status: 'PENDING' } }),
     ]);
 
@@ -226,8 +288,14 @@ export class UsersService {
       select: { grossFare: true, commissionAmount: true },
     });
 
-    const totalRevenue = settled.reduce((sum, s) => sum + Number(s.grossFare), 0);
-    const totalCommission = settled.reduce((sum, s) => sum + Number(s.commissionAmount), 0);
+    const totalRevenue = settled.reduce(
+      (sum, s) => sum + Number(s.grossFare),
+      0,
+    );
+    const totalCommission = settled.reduce(
+      (sum, s) => sum + Number(s.commissionAmount),
+      0,
+    );
 
     return {
       orgsCount,

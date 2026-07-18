@@ -22,7 +22,9 @@ import { PrismaService } from '../database/prisma.service';
   },
   namespace: 'tracking',
 })
-export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class TrackingGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -41,23 +43,30 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
    */
   async handleConnection(client: Socket) {
     try {
-      const authHeader = client.handshake.headers.authorization || client.handshake.auth?.token;
+      const authHeader =
+        client.handshake.headers.authorization || client.handshake.auth?.token;
       if (!authHeader) {
         this.logger.warn(`Disconnecting unauthenticated client: ${client.id}`);
         client.disconnect(true);
         return;
       }
 
-      const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
+      const token = authHeader.startsWith('Bearer ')
+        ? authHeader.split(' ')[1]
+        : authHeader;
       const payload = this.jwtService.verify(token, {
         secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
       });
 
       // Save user payload context on socket
       client.data.user = payload;
-      this.logger.log(`Client authenticated: ${client.id} (User: ${payload.email})`);
+      this.logger.log(
+        `Client authenticated: ${client.id} (User: ${payload.email})`,
+      );
     } catch (err) {
-      this.logger.warn(`Authentication failed for client ${client.id}: ${err.message}`);
+      this.logger.warn(
+        `Authentication failed for client ${client.id}: ${err.message}`,
+      );
       client.disconnect(true);
     }
   }
@@ -83,8 +92,10 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
     try {
       // 1. Fetch trip and check if the user is a registered participant of this trip
       const trip = await this.tripsService.findById(data.tripId);
-      
-      const isParticipant = trip.participants.some((p: any) => p.userId === user.sub);
+
+      const isParticipant = trip.participants.some(
+        (p: any) => p.userId === user.sub,
+      );
       if (!isParticipant && user.role !== 'SUPER_ADMIN') {
         client.emit('error', 'You are not a participant of this trip');
         return;
@@ -94,11 +105,13 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
       const roomName = `trip:${data.tripId}`;
       await client.join(roomName);
       this.logger.log('User joined tracking room');
-      
+
       client.emit('joinedRoom', { room: roomName });
 
       // 3. Emit last cached location from Redis if available
-      const lastLoc = await this.redisService.get(`trip:${data.tripId}:location`);
+      const lastLoc = await this.redisService.get(
+        `trip:${data.tripId}:location`,
+      );
       if (lastLoc) {
         client.emit('locationUpdate', JSON.parse(lastLoc));
       }
@@ -140,7 +153,10 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
       }
 
       // 3. Updates are only broadcasted while trip is active (STARTED or IN_PROGRESS)
-      if (trip.status !== TripStatus.STARTED && trip.status !== TripStatus.IN_PROGRESS) {
+      if (
+        trip.status !== TripStatus.STARTED &&
+        trip.status !== TripStatus.IN_PROGRESS
+      ) {
         client.emit('error', 'Trip is not active. Location pings rejected.');
         return;
       }
@@ -157,7 +173,10 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
 
       // 4. Cache current location in Redis (highly efficient retrieval)
       const roomName = `trip:${data.tripId}`;
-      await this.redisService.set(`${roomName}:location`, JSON.stringify(locationPayload));
+      await this.redisService.set(
+        `${roomName}:location`,
+        JSON.stringify(locationPayload),
+      );
 
       // 5. Broadcast to all subscribed passengers in the room
       this.server.to(roomName).emit('locationUpdate', locationPayload);

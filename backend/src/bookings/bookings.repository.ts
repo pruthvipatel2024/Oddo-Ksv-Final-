@@ -89,7 +89,10 @@ export class BookingsRepository extends BaseRepository<Booking> {
   /**
    * Check if a user already has an active booking on a specific ride.
    */
-  async findUserActiveBookingOnRide(passengerId: string, rideId: string): Promise<Booking | null> {
+  async findUserActiveBookingOnRide(
+    passengerId: string,
+    rideId: string,
+  ): Promise<Booking | null> {
     return this.prisma.booking.findFirst({
       where: {
         passengerId,

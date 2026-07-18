@@ -26,7 +26,7 @@ export default function AdminLoginPage() {
     try {
       const response = await login({ email: email.trim(), password });
       // Enforce that only admin roles can access this portal
-      if (response.role === "EMPLOYEE") {
+      if (response.user.role === "EMPLOYEE") {
         throw new Error("Access denied: You are logged in as an Employee. Please use the employee portal.");
       }
       router.push("/admin/employees");

@@ -6,7 +6,14 @@ import {
   ConflictException,
   Logger,
 } from '@nestjs/common';
-import { Booking, BookingStatus, TripStatus, ParticipantRole, PaymentStatus, PaymentMethod } from '@prisma/client';
+import {
+  Booking,
+  BookingStatus,
+  TripStatus,
+  ParticipantRole,
+  PaymentStatus,
+  PaymentMethod,
+} from '@prisma/client';
 import { BookingsRepository } from './bookings.repository';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
@@ -36,9 +43,15 @@ export class BookingsService {
     }
 
     // 3. Check for active duplicates
-    const activeBooking = await this.bookingsRepository.findUserActiveBookingOnRide(passengerId, dto.rideId);
+    const activeBooking =
+      await this.bookingsRepository.findUserActiveBookingOnRide(
+        passengerId,
+        dto.rideId,
+      );
     if (activeBooking) {
-      throw new ConflictException('You already have an active booking request for this ride');
+      throw new ConflictException(
+        'You already have an active booking request for this ride',
+      );
     }
 
     const fare = Number(ride.farePerSeat) * dto.seatsBooked;
@@ -53,7 +66,9 @@ export class BookingsService {
       });
 
       if (!wallet || Number(wallet.availableBalance) < fare) {
-        throw new BadRequestException('Insufficient wallet balance to book this ride. Please recharge your wallet.');
+        throw new BadRequestException(
+          'Insufficient wallet balance to book this ride. Please recharge your wallet.',
+        );
       }
 
       // Check current ride seat count
@@ -61,8 +76,14 @@ export class BookingsService {
         where: { id: dto.rideId },
       });
 
-      if (!currentRide || currentRide.status !== 'OPEN' || currentRide.availableSeats < dto.seatsBooked) {
-        throw new BadRequestException('The requested ride is not open or does not have enough available seats');
+      if (
+        !currentRide ||
+        currentRide.status !== 'OPEN' ||
+        currentRide.availableSeats < dto.seatsBooked
+      ) {
+        throw new BadRequestException(
+          'The requested ride is not open or does not have enough available seats',
+        );
       }
 
       // Debit passenger wallet
@@ -109,7 +130,9 @@ export class BookingsService {
         },
       });
 
-      this.logger.log(`Booking ${bookingReference} requested. Escrowed fare: ${fare} from Passenger: ${passengerId}`);
+      this.logger.log(
+        `Booking ${bookingReference} requested. Escrowed fare: ${fare} from Passenger: ${passengerId}`,
+      );
       return booking;
     });
   }
@@ -161,7 +184,7 @@ export class BookingsService {
     switch (dto.status) {
       case BookingStatus.CONFIRMED:
         return this.approveBooking(booking, ride, userId);
-      
+
       case BookingStatus.REJECTED:
         return this.rejectBooking(booking, ride, userId, dto.cancelReason);
 
@@ -180,9 +203,15 @@ export class BookingsService {
   /**
    * Approve booking (Driver only) - Decrements seats, provisions Trip, and links payments.
    */
-  private async approveBooking(booking: any, ride: any, driverId: string): Promise<Booking> {
+  private async approveBooking(
+    booking: any,
+    ride: any,
+    driverId: string,
+  ): Promise<Booking> {
     if (ride.driverId !== driverId) {
-      throw new ForbiddenException('Only the driver can approve booking requests');
+      throw new ForbiddenException(
+        'Only the driver can approve booking requests',
+      );
     }
 
     if (booking.status !== BookingStatus.PENDING) {
@@ -200,7 +229,9 @@ export class BookingsService {
       }
 
       if (currentRide.availableSeats < booking.seatsBooked) {
-        throw new BadRequestException('Not enough seats available on this ride');
+        throw new BadRequestException(
+          'Not enough seats available on this ride',
+        );
       }
 
       // 2. Decrement available seats
@@ -283,7 +314,9 @@ export class BookingsService {
         });
       }
 
-      this.logger.log(`Booking ${booking.bookingReference} approved. Trip ID: ${trip.id}`);
+      this.logger.log(
+        `Booking ${booking.bookingReference} approved. Trip ID: ${trip.id}`,
+      );
       return updatedBooking;
     });
   }
@@ -291,9 +324,16 @@ export class BookingsService {
   /**
    * Reject booking (Driver only) - Refunds passenger.
    */
-  private async rejectBooking(booking: any, ride: any, driverId: string, reason?: string): Promise<Booking> {
+  private async rejectBooking(
+    booking: any,
+    ride: any,
+    driverId: string,
+    reason?: string,
+  ): Promise<Booking> {
     if (ride.driverId !== driverId) {
-      throw new ForbiddenException('Only the driver can reject booking requests');
+      throw new ForbiddenException(
+        'Only the driver can reject booking requests',
+      );
     }
 
     if (booking.status !== BookingStatus.PENDING) {
@@ -307,11 +347,16 @@ export class BookingsService {
       });
 
       if (payment) {
-        const wallet = await tx.wallet.findUnique({ where: { userId: booking.passengerId } });
+        const wallet = await tx.wallet.findUnique({
+          where: { userId: booking.passengerId },
+        });
         if (wallet) {
           await tx.wallet.update({
             where: { id: wallet.id },
-            data: { availableBalance: Number(wallet.availableBalance) + Number(payment.amount) },
+            data: {
+              availableBalance:
+                Number(wallet.availableBalance) + Number(payment.amount),
+            },
           });
 
           await tx.walletTransaction.create({
@@ -344,7 +389,12 @@ export class BookingsService {
   /**
    * Cancel booking (Passenger or Driver) - Refunds seats and passenger wallet.
    */
-  private async cancelBooking(booking: any, ride: any, userId: string, reason?: string): Promise<Booking> {
+  private async cancelBooking(
+    booking: any,
+    ride: any,
+    userId: string,
+    reason?: string,
+  ): Promise<Booking> {
     if (booking.passengerId !== userId && ride.driverId !== userId) {
       throw new ForbiddenException('You cannot cancel this booking');
     }
@@ -365,7 +415,8 @@ export class BookingsService {
             where: { id: ride.id },
             data: {
               availableSeats: currentRide.availableSeats + booking.seatsBooked,
-              status: currentRide.status === 'FULL' ? 'OPEN' : currentRide.status,
+              status:
+                currentRide.status === 'FULL' ? 'OPEN' : currentRide.status,
             },
           });
         }
@@ -391,11 +442,16 @@ export class BookingsService {
       });
 
       if (payment) {
-        const wallet = await tx.wallet.findUnique({ where: { userId: booking.passengerId } });
+        const wallet = await tx.wallet.findUnique({
+          where: { userId: booking.passengerId },
+        });
         if (wallet) {
           await tx.wallet.update({
             where: { id: wallet.id },
-            data: { availableBalance: Number(wallet.availableBalance) + Number(payment.amount) },
+            data: {
+              availableBalance:
+                Number(wallet.availableBalance) + Number(payment.amount),
+            },
           });
 
           await tx.walletTransaction.create({
@@ -423,7 +479,9 @@ export class BookingsService {
         },
       });
 
-      this.logger.log(`Booking ${booking.bookingReference} cancelled. Refund issued.`);
+      this.logger.log(
+        `Booking ${booking.bookingReference} cancelled. Refund issued.`,
+      );
       return updatedBooking;
     });
   }
@@ -431,13 +489,22 @@ export class BookingsService {
   /**
    * Mark booking as NO_SHOW or EXPIRED - Refunds seats and passenger.
    */
-  private async markNoShowOrExpired(booking: any, ride: any, driverId: string, targetStatus: BookingStatus): Promise<Booking> {
+  private async markNoShowOrExpired(
+    booking: any,
+    ride: any,
+    driverId: string,
+    targetStatus: BookingStatus,
+  ): Promise<Booking> {
     if (ride.driverId !== driverId) {
-      throw new ForbiddenException('Only the driver can update passenger check-in statuses');
+      throw new ForbiddenException(
+        'Only the driver can update passenger check-in statuses',
+      );
     }
 
     if (booking.status !== BookingStatus.CONFIRMED) {
-      throw new BadRequestException('Can only update status of confirmed bookings');
+      throw new BadRequestException(
+        'Can only update status of confirmed bookings',
+      );
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -462,11 +529,16 @@ export class BookingsService {
       });
 
       if (payment) {
-        const wallet = await tx.wallet.findUnique({ where: { userId: booking.passengerId } });
+        const wallet = await tx.wallet.findUnique({
+          where: { userId: booking.passengerId },
+        });
         if (wallet) {
           await tx.wallet.update({
             where: { id: wallet.id },
-            data: { availableBalance: Number(wallet.availableBalance) + Number(payment.amount) },
+            data: {
+              availableBalance:
+                Number(wallet.availableBalance) + Number(payment.amount),
+            },
           });
 
           await tx.walletTransaction.create({

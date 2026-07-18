@@ -40,7 +40,11 @@ export class WalletsService {
   /**
    * Recharge available balance (Deposit).
    */
-  async recharge(userId: string, amount: number, referenceId?: string): Promise<Wallet> {
+  async recharge(
+    userId: string,
+    amount: number,
+    referenceId?: string,
+  ): Promise<Wallet> {
     return this.prisma.$transaction(async (tx) => {
       const wallet = await tx.wallet.findUnique({
         where: { userId },
@@ -68,7 +72,9 @@ export class WalletsService {
         },
       });
 
-      this.logger.log(`Wallet ${wallet.id} deposited: ${amount}. Available: ${updated.availableBalance}`);
+      this.logger.log(
+        `Wallet ${wallet.id} deposited: ${amount}. Available: ${updated.availableBalance}`,
+      );
       return updated;
     });
   }
@@ -91,7 +97,9 @@ export class WalletsService {
 
       const balance = Number(wallet.availableBalance);
       if (balance - amount < 0) {
-        throw new BadRequestException('Insufficient wallet balance to perform deduction');
+        throw new BadRequestException(
+          'Insufficient wallet balance to perform deduction',
+        );
       }
 
       const updated = await tx.wallet.update({
@@ -179,7 +187,8 @@ export class WalletsService {
       const updated = await tx.wallet.update({
         where: { id: wallet.id },
         data: {
-          pendingEarnings: pending - grossAmount >= 0 ? pending - grossAmount : 0,
+          pendingEarnings:
+            pending - grossAmount >= 0 ? pending - grossAmount : 0,
           availableBalance: Number(wallet.availableBalance) + netAmount,
         },
       });

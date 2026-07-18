@@ -4,10 +4,7 @@ import { TrackingGateway } from './tracking.gateway';
 import { TripsModule } from '../trips/trips.module';
 
 @Module({
-  imports: [
-    JwtModule.register({}),
-    TripsModule,
-  ],
+  imports: [JwtModule.register({}), TripsModule],
   providers: [TrackingGateway],
   exports: [TrackingGateway],
 })

@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, ConflictException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  ConflictException,
+  Logger,
+} from '@nestjs/common';
 import { Rating } from '@prisma/client';
 import { RatingsRepository } from './ratings.repository';
 import { CreateRatingDto } from './dto/create-rating.dto';
@@ -31,15 +36,23 @@ export class RatingsService {
     }
 
     if (trip.status !== 'COMPLETED') {
-      throw new BadRequestException('Ratings can only be submitted for completed trips');
+      throw new BadRequestException(
+        'Ratings can only be submitted for completed trips',
+      );
     }
 
     // 2. Verify reviewer and reviewee are part of the trip
-    const isReviewerInTrip = trip.ride.driverId === reviewerId || trip.participants.some(p => p.userId === reviewerId);
-    const isRevieweeInTrip = trip.ride.driverId === dto.revieweeId || trip.participants.some(p => p.userId === dto.revieweeId);
+    const isReviewerInTrip =
+      trip.ride.driverId === reviewerId ||
+      trip.participants.some((p) => p.userId === reviewerId);
+    const isRevieweeInTrip =
+      trip.ride.driverId === dto.revieweeId ||
+      trip.participants.some((p) => p.userId === dto.revieweeId);
 
     if (!isReviewerInTrip || !isRevieweeInTrip) {
-      throw new BadRequestException('Both reviewer and reviewee must be participants in the trip');
+      throw new BadRequestException(
+        'Both reviewer and reviewee must be participants in the trip',
+      );
     }
 
     if (reviewerId === dto.revieweeId) {
@@ -57,7 +70,9 @@ export class RatingsService {
     });
 
     if (existing) {
-      throw new ConflictException('You have already submitted a rating for this user on this trip');
+      throw new ConflictException(
+        'You have already submitted a rating for this user on this trip',
+      );
     }
 
     // 4. Record rating
@@ -70,7 +85,9 @@ export class RatingsService {
       type: dto.type,
     });
 
-    this.logger.log(`Rating logged: Trip #${dto.tripId} reviewer: ${reviewerId} reviewee: ${dto.revieweeId} rating: ${dto.rating}`);
+    this.logger.log(
+      `Rating logged: Trip #${dto.tripId} reviewer: ${reviewerId} reviewee: ${dto.revieweeId} rating: ${dto.rating}`,
+    );
     return rating;
   }
 

@@ -1,4 +1,9 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
@@ -7,10 +12,14 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   private client: Redis | null = null;
   private readonly logger = new Logger('RedisService');
   private readonly useMemory: boolean;
-  private readonly memoryStore = new Map<string, { value: string; expiresAt?: number }>();
+  private readonly memoryStore = new Map<
+    string,
+    { value: string; expiresAt?: number }
+  >();
 
   constructor(private readonly configService: ConfigService) {
-    const enabled = this.configService.get<string>('REDIS_ENABLED', 'true') === 'true';
+    const enabled =
+      this.configService.get<string>('REDIS_ENABLED', 'true') === 'true';
 
     if (!enabled) {
       this.logger.warn('Redis is disabled. Using in-memory fallback store.');
@@ -54,7 +63,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
    */
   getClient(): Redis {
     if (this.useMemory || !this.client) {
-      throw new Error('Redis client is not available (in-memory mode is active)');
+      throw new Error(
+        'Redis client is not available (in-memory mode is active)',
+      );
     }
     return this.client;
   }

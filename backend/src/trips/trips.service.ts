@@ -58,7 +58,9 @@ export class TripsService {
     // 1. Enforce driver authorization for operations (only driver can start/complete/cancel)
     const isDriver = trip.ride.driverId === userId;
     if (!isDriver) {
-      throw new ForbiddenException('Only the driver of the ride can modify active trip statuses');
+      throw new ForbiddenException(
+        'Only the driver of the ride can modify active trip statuses',
+      );
     }
 
     // 2. Validate state machine transition logic
@@ -74,8 +76,9 @@ export class TripsService {
 
       if (targetStatus === TripStatus.STARTED) {
         updateData.startedAt = new Date();
-        updateData.actualStartLocation = dto.actualStartLocation || trip.ride.pickupAddress;
-        
+        updateData.actualStartLocation =
+          dto.actualStartLocation || trip.ride.pickupAddress;
+
         // Update ride status
         await tx.ride.update({
           where: { id: trip.rideId },
@@ -85,16 +88,22 @@ export class TripsService {
 
       if (targetStatus === TripStatus.COMPLETED) {
         updateData.completedAt = new Date();
-        updateData.actualEndLocation = dto.actualEndLocation || trip.ride.destinationAddress;
+        updateData.actualEndLocation =
+          dto.actualEndLocation || trip.ride.destinationAddress;
         updateData.endedBy = userId;
-        
+
         // Convert meters to KM
-        const distanceKm = Number((trip.ride.routeDistanceMeters / 1000).toFixed(2));
+        const distanceKm = Number(
+          (trip.ride.routeDistanceMeters / 1000).toFixed(2),
+        );
         updateData.actualDistance = distanceKm;
 
         // Estimate average speed (km/h)
         const durationMin = Math.round(trip.ride.routeDurationSeconds / 60);
-        updateData.averageSpeed = durationMin > 0 ? Number(((distanceKm / (durationMin / 60))).toFixed(1)) : 0;
+        updateData.averageSpeed =
+          durationMin > 0
+            ? Number((distanceKm / (durationMin / 60)).toFixed(1))
+            : 0;
 
         // Update ride status
         await tx.ride.update({
@@ -107,9 +116,15 @@ export class TripsService {
           where: { rideId: trip.rideId, status: 'CONFIRMED' },
         });
 
-        const grossFare = confirmedBookings.reduce((sum, b) => sum + Number(b.fare), 0);
-        const commissionRate = Number(process.env.PLATFORM_COMMISSION_PERCENT || 10) / 100;
-        const commissionAmount = Number((grossFare * commissionRate).toFixed(2));
+        const grossFare = confirmedBookings.reduce(
+          (sum, b) => sum + Number(b.fare),
+          0,
+        );
+        const commissionRate =
+          Number(process.env.PLATFORM_COMMISSION_PERCENT || 10) / 100;
+        const commissionAmount = Number(
+          (grossFare * commissionRate).toFixed(2),
+        );
         const netEarnings = grossFare - commissionAmount;
 
         // Update payment records status to SUCCESS
@@ -127,7 +142,8 @@ export class TripsService {
           await tx.wallet.update({
             where: { id: driverWallet.id },
             data: {
-              availableBalance: Number(driverWallet.availableBalance) + netEarnings,
+              availableBalance:
+                Number(driverWallet.availableBalance) + netEarnings,
             },
           });
 
@@ -181,7 +197,8 @@ export class TripsService {
               await tx.wallet.update({
                 where: { id: wallet.id },
                 data: {
-                  availableBalance: Number(wallet.availableBalance) + Number(payment.amount),
+                  availableBalance:
+                    Number(wallet.availableBalance) + Number(payment.amount),
                 },
               });
 
@@ -236,7 +253,9 @@ export class TripsService {
         status: updateData.status,
       });
 
-      this.logger.log(`Trip ${id} transitioned from ${currentStatus} to ${updateData.status}`);
+      this.logger.log(
+        `Trip ${id} transitioned from ${currentStatus} to ${updateData.status}`,
+      );
       return updatedTrip;
     });
   }
@@ -247,7 +266,11 @@ export class TripsService {
   private validateTransition(current: TripStatus, target: TripStatus) {
     const allowedTransitions: Record<TripStatus, TripStatus[]> = {
       [TripStatus.BOOKED]: [TripStatus.STARTED, TripStatus.CANCELLED],
-      [TripStatus.STARTED]: [TripStatus.IN_PROGRESS, TripStatus.COMPLETED, TripStatus.CANCELLED],
+      [TripStatus.STARTED]: [
+        TripStatus.IN_PROGRESS,
+        TripStatus.COMPLETED,
+        TripStatus.CANCELLED,
+      ],
       [TripStatus.IN_PROGRESS]: [TripStatus.COMPLETED, TripStatus.CANCELLED],
       [TripStatus.COMPLETED]: [],
       [TripStatus.CANCELLED]: [],

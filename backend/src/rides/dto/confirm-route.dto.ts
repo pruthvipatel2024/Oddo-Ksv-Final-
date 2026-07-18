@@ -10,11 +10,17 @@ export class ConfirmRouteDto {
   @IsNumber()
   pickupLng: number;
 
-  @ApiProperty({ example: 18.559, description: 'Destination latitude coordinate' })
+  @ApiProperty({
+    example: 18.559,
+    description: 'Destination latitude coordinate',
+  })
   @IsNumber()
   destinationLat: number;
 
-  @ApiProperty({ example: 73.9272, description: 'Destination longitude coordinate' })
+  @ApiProperty({
+    example: 73.9272,
+    description: 'Destination longitude coordinate',
+  })
   @IsNumber()
   destinationLng: number;
 }

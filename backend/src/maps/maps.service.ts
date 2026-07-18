@@ -17,7 +17,9 @@ export class MapsService {
       this.logger.log('Google Maps API Key found. Using GoogleMapsProvider.');
       this.provider = new GoogleMapsProvider(apiKey);
     } else {
-      this.logger.warn('Google Maps API Key is missing or empty. Falling back to MockMapsProvider.');
+      this.logger.warn(
+        'Google Maps API Key is missing or empty. Falling back to MockMapsProvider.',
+      );
       this.provider = new MockMapsProvider();
     }
   }
@@ -31,7 +33,9 @@ export class MapsService {
     destLat: number,
     destLng: number,
   ): Promise<MapRouteResult> {
-    this.logger.log(`Calculating route from (${originLat}, ${originLng}) to (${destLat}, ${destLng})`);
+    this.logger.log(
+      `Calculating route from (${originLat}, ${originLng}) to (${destLat}, ${destLng})`,
+    );
     return this.provider.getRoute(originLat, originLng, destLat, destLng);
   }
 }

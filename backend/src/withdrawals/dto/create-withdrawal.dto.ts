@@ -7,7 +7,10 @@ export class CreateWithdrawalDto {
   @Min(100)
   amount: number;
 
-  @ApiProperty({ example: 'IFSC: HDFC0001234, A/C: 50100234567890', description: 'Destination bank details' })
+  @ApiProperty({
+    example: 'IFSC: HDFC0001234, A/C: 50100234567890',
+    description: 'Destination bank details',
+  })
   @IsString()
   @IsNotEmpty()
   bankAccountDetails: string;

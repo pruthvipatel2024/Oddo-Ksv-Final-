@@ -1,13 +1,26 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { UserRole, UserType } from '@prisma/client';
-import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 export class RegisterDto {
-  @ApiProperty({ example: 'employee@company.com', description: 'The email address of the user' })
+  @ApiProperty({
+    example: 'employee@company.com',
+    description: 'The email address of the user',
+  })
   @IsEmail()
   email: string;
 
-  @ApiProperty({ example: 'password123', description: 'The password (minimum 8 characters)' })
+  @ApiProperty({
+    example: 'password123',
+    description: 'The password (minimum 8 characters)',
+  })
   @IsString()
   @MinLength(8)
   password: string;
@@ -27,17 +40,28 @@ export class RegisterDto {
   @IsNotEmpty()
   phone: string;
 
-  @ApiProperty({ example: 'ORG123', description: 'Organization invite code to bind the user' })
+  @ApiProperty({
+    example: 'ORG123',
+    description: 'Organization invite code to bind the user',
+  })
   @IsString()
   @IsNotEmpty()
   organizationCode: string;
 
-  @ApiProperty({ example: 'EMP-001', description: 'Employee identifier code within the organization', required: false })
+  @ApiProperty({
+    example: 'EMP-001',
+    description: 'Employee identifier code within the organization',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   employeeCode?: string;
 
-  @ApiProperty({ enum: UserType, example: UserType.INTERNAL, description: 'Type of user (INTERNAL or EXTERNAL)' })
+  @ApiProperty({
+    enum: UserType,
+    example: UserType.INTERNAL,
+    description: 'Type of user (INTERNAL or EXTERNAL)',
+  })
   @IsEnum(UserType)
   userType: UserType;
 }

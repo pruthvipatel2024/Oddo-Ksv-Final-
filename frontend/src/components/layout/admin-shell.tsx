@@ -6,7 +6,7 @@ import { ReactNode } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Icons } from "@/components/ui/icons";
 import { StatCard } from "@/components/ui/card";
-import { orgStats } from "@/lib/mock-data";
+import { useOrgAdminDashboard } from "@/hooks/useProfile";
 
 const tabs = [
   { href: "/admin/employees", label: "Employees" },
@@ -16,6 +16,11 @@ const tabs = [
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { data, isLoading } = useOrgAdminDashboard();
+
+  const employeeCount = isLoading ? "..." : String(data?.employeeCount ?? 0);
+  const vehicleCount = isLoading ? "..." : String(data?.vehicleCount ?? 0);
+  const totalRides = isLoading ? "..." : String(data?.stats?.totalRidesOffered ?? 0);
 
   return (
     <div className="min-h-screen bg-ink-50 dark:bg-ink-950">
@@ -26,7 +31,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <Icons.car width={18} height={18} />
             </span>
             <div>
-              <p className="font-display text-base font-bold leading-none text-ink-800 dark:text-white">Carpool</p>
+              <p className="font-display text-base font-bold leading-none text-ink-800 dark:text-white">RidesFare</p>
               <p className="text-[11px] text-ink-400">Admin Dashboard</p>
             </div>
           </Link>
@@ -45,9 +50,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
       <div className="mx-auto max-w-6xl px-6 py-6">
         {/* Org stat strip */}
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <StatCard label="Total Employees" value={String(orgStats.totalEmployees)} accent="teal" />
-          <StatCard label="Registered Vehicles" value={String(orgStats.registeredVehicles)} accent="teal" />
-          <StatCard label="Rides This Month" value={String(orgStats.ridesThisMonth)} accent="amber" />
+          <StatCard label="Total Employees" value={employeeCount} accent="teal" />
+          <StatCard label="Registered Vehicles" value={vehicleCount} accent="teal" />
+          <StatCard label="Rides This Month" value={totalRides} accent="amber" />
         </div>
 
         {/* Tabs */}

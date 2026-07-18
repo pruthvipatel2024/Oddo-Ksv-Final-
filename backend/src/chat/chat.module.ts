@@ -7,10 +7,7 @@ import { ChatRepository } from './chat.repository';
 import { TripsModule } from '../trips/trips.module';
 
 @Module({
-  imports: [
-    JwtModule.register({}),
-    TripsModule,
-  ],
+  imports: [JwtModule.register({}), TripsModule],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway, ChatRepository],
   exports: [ChatService, ChatRepository],

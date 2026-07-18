@@ -11,13 +11,16 @@ export class GoogleMapsProvider implements MapProvider {
     destLng: number,
   ): Promise<MapRouteResult> {
     const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${originLat},${originLng}&destination=${destLat},${destLng}&key=${this.apiKey}`;
-    
+
     try {
       const response = await fetch(url);
       const data = await response.json();
 
       if (data.status !== 'OK' || !data.routes || data.routes.length === 0) {
-        throw new Error(data.error_message || `Google Maps API returned status: ${data.status}`);
+        throw new Error(
+          data.error_message ||
+            `Google Maps API returned status: ${data.status}`,
+        );
       }
 
       const route = data.routes[0];
@@ -31,7 +34,9 @@ export class GoogleMapsProvider implements MapProvider {
         destinationAddress: leg.end_address,
       };
     } catch (err: any) {
-      throw new Error(`Failed to calculate route via Google Maps: ${err.message}`);
+      throw new Error(
+        `Failed to calculate route via Google Maps: ${err.message}`,
+      );
     }
   }
 }

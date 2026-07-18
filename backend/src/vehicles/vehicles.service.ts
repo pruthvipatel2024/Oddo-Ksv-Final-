@@ -21,9 +21,13 @@ export class VehiclesService {
    * Register a new vehicle for a driver.
    */
   async create(ownerId: string, dto: CreateVehicleDto): Promise<Vehicle> {
-    const existing = await this.vehiclesRepository.findByRegistrationNumber(dto.registrationNumber);
+    const existing = await this.vehiclesRepository.findByRegistrationNumber(
+      dto.registrationNumber,
+    );
     if (existing) {
-      throw new ConflictException('A vehicle with this registration number is already registered');
+      throw new ConflictException(
+        'A vehicle with this registration number is already registered',
+      );
     }
 
     return this.vehiclesRepository.create({
@@ -32,8 +36,12 @@ export class VehiclesService {
       color: dto.color,
       registrationNumber: dto.registrationNumber,
       seatingCapacity: dto.seatingCapacity,
-      insuranceExpiry: dto.insuranceExpiry ? new Date(dto.insuranceExpiry) : null,
-      pollutionExpiry: dto.pollutionExpiry ? new Date(dto.pollutionExpiry) : null,
+      insuranceExpiry: dto.insuranceExpiry
+        ? new Date(dto.insuranceExpiry)
+        : null,
+      pollutionExpiry: dto.pollutionExpiry
+        ? new Date(dto.pollutionExpiry)
+        : null,
       vehiclePhoto: dto.vehiclePhoto || null,
       ownerId,
     });
@@ -64,7 +72,9 @@ export class VehiclesService {
     if (requesterRole !== UserRole.SUPER_ADMIN) {
       // 1. Must belong to the same organization
       if (owner.organizationId !== requesterOrgId) {
-        throw new ForbiddenException('You cannot access vehicles from another organization');
+        throw new ForbiddenException(
+          'You cannot access vehicles from another organization',
+        );
       }
 
       // 2. Standard employees can only access details of their own vehicles
@@ -85,7 +95,9 @@ export class VehiclesService {
     const owner = await this.usersService.findById(vehicle.ownerId);
 
     if (organizationId && owner.organizationId !== organizationId) {
-      throw new ForbiddenException('This vehicle belongs to a user from another organization');
+      throw new ForbiddenException(
+        'This vehicle belongs to a user from another organization',
+      );
     }
 
     return vehicle;
@@ -94,15 +106,21 @@ export class VehiclesService {
   /**
    * Update own vehicle details.
    */
-  async update(id: string, ownerId: string, dto: UpdateVehicleDto): Promise<Vehicle> {
+  async update(
+    id: string,
+    ownerId: string,
+    dto: UpdateVehicleDto,
+  ): Promise<Vehicle> {
     const vehicle = await this.vehiclesRepository.findById(id);
     if (vehicle.ownerId !== ownerId) {
       throw new ForbiddenException('You do not own this vehicle');
     }
 
     const updateData: any = { ...dto };
-    if (dto.insuranceExpiry) updateData.insuranceExpiry = new Date(dto.insuranceExpiry);
-    if (dto.pollutionExpiry) updateData.pollutionExpiry = new Date(dto.pollutionExpiry);
+    if (dto.insuranceExpiry)
+      updateData.insuranceExpiry = new Date(dto.insuranceExpiry);
+    if (dto.pollutionExpiry)
+      updateData.pollutionExpiry = new Date(dto.pollutionExpiry);
 
     return this.vehiclesRepository.update(id, updateData);
   }
@@ -129,7 +147,9 @@ export class VehiclesService {
     if (adminOrgId) {
       const owner = await this.usersService.findById(vehicle.ownerId);
       if (owner.organizationId !== adminOrgId) {
-        throw new ForbiddenException('Cannot verify vehicle belonging to an employee in another organization');
+        throw new ForbiddenException(
+          'Cannot verify vehicle belonging to an employee in another organization',
+        );
       }
     }
 
@@ -139,17 +159,7 @@ export class VehiclesService {
   /**
    * Get all registered vehicles in the platform (Super Admin or Org Admin views).
    */
-  async findAll(organizationId?: string): Promise<Vehicle[]> {
-    if (organizationId) {
-      // Filter vehicles where the owner is in the target organization
-      return this.vehiclesRepository.findAll({
-        owner: {
-          organizationId,
-        },
-        deletedAt: null,
-      });
-    }
-
-    return this.vehiclesRepository.findAll({ deletedAt: null });
+  async findAll(organizationId?: string): Promise<any[]> {
+    return this.vehiclesRepository.findAllWithOwners(organizationId);
   }
 }

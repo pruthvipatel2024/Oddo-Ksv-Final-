@@ -22,7 +22,9 @@ export class RatingsRepository extends BaseRepository<Rating> {
       },
     });
 
-    return aggregate._avg.rating ? Number(aggregate._avg.rating.toFixed(2)) : 5.0;
+    return aggregate._avg.rating
+      ? Number(aggregate._avg.rating.toFixed(2))
+      : 5.0;
   }
 
   /**
