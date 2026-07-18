@@ -35,12 +35,12 @@ export default function WalletCard({
         <div className="mt-4 grid grid-cols-2 gap-4">
           <div className="rounded-xl bg-zinc-50 p-4 border border-zinc-100 dark:bg-zinc-900/50 dark:border-zinc-850">
             <span className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Available Cash</span>
-            <span className="text-2xl font-black text-zinc-900 mt-1 block dark:text-zinc-100">₹{balance.toFixed(2)}</span>
+            <span className="text-2xl font-black text-zinc-900 mt-1 block dark:text-zinc-100">₹{Number(balance || 0).toFixed(2)}</span>
           </div>
 
           <div className="rounded-xl bg-zinc-50 p-4 border border-zinc-100 dark:bg-zinc-900/50 dark:border-zinc-850">
             <span className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Pending Earnings</span>
-            <span className="text-2xl font-black text-emerald-600 mt-1 block dark:text-emerald-400">₹{pendingEarnings.toFixed(2)}</span>
+            <span className="text-2xl font-black text-emerald-600 mt-1 block dark:text-emerald-400">₹{Number(pendingEarnings || 0).toFixed(2)}</span>
           </div>
         </div>
       </div>
