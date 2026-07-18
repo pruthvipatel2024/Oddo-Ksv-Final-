@@ -140,28 +140,6 @@ export const SplashView: React.FC<SplashViewProps> = ({ onStart }) => {
           <ArrowRight className="h-4 w-4 animate-[pulse_1.5s_infinite] text-indigo-600" />
         </div>
       </div>
-
-      {/* Floating Car keyframes inserted directly into a style tag for runtime inclusion */}
-      <style jsx global>{`
-        @keyframes float {
-          0%, 100% {
-            transform: translateY(0px);
-          }
-          50% {
-            transform: translateY(-12px);
-          }
-        }
-        @keyframes shadow {
-          0%, 100% {
-            transform: scale(1);
-            opacity: 0.8;
-          }
-          50% {
-            transform: scale(0.85);
-            opacity: 0.4;
-          }
-        }
-      `}</style>
     </div>
   );
 };
