@@ -18,8 +18,10 @@ async function main() {
     create: {
       name: 'Company A (Tech Corp)',
       code: 'CORPA',
-      fuelCostPerLitre: 100.00,
-      costPerKm: 15.00,
+      address: '1st Floor, Tech Park, Whitefield',
+      city: 'Bengaluru',
+      state: 'Karnataka',
+      country: 'India',
     },
   });
   console.log(`Seeded Organization: ${orgA.name} with code CORPA`);
@@ -30,8 +32,10 @@ async function main() {
     create: {
       name: 'Company B (Finance Solutions)',
       code: 'CORPB',
-      fuelCostPerLitre: 95.00,
-      costPerKm: 14.50,
+      address: '3rd Floor, Finance Tower, BKC',
+      city: 'Mumbai',
+      state: 'Maharashtra',
+      country: 'India',
     },
   });
   console.log(`Seeded Organization: ${orgB.name} with code CORPB`);

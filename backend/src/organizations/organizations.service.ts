@@ -9,12 +9,20 @@ export class OrganizationsService {
   /**
    * Create a new organization.
    */
-  async create(data: Prisma.OrganizationCreateInput): Promise<Organization> {
+  async create(data: {
+    name: string;
+    code: string;
+    emailDomain?: string;
+    address: string;
+    city: string;
+    state: string;
+    country: string;
+  }): Promise<Organization> {
     const existing = await this.orgsRepository.findByCode(data.code);
     if (existing) {
       throw new ConflictException('Organization with this code already exists');
     }
-    return this.orgsRepository.create(data);
+    return this.orgsRepository.create(data as any);
   }
 
   /**

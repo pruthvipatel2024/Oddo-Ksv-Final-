@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber, IsString, IsPositive } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateOrganizationDto {
   @ApiProperty({ example: 'Tech Corp Inc.', description: 'The name of the organization' })
@@ -12,13 +12,28 @@ export class CreateOrganizationDto {
   @IsNotEmpty()
   code: string;
 
-  @ApiProperty({ example: 100.0, description: 'Fuel cost per litre set by org administrator' })
-  @IsNumber()
-  @IsPositive()
-  fuelCostPerLitre: number;
+  @ApiPropertyOptional({ example: 'tech.corp', description: 'Email domain for employee auto-verification' })
+  @IsString()
+  @IsOptional()
+  emailDomain?: string;
 
-  @ApiProperty({ example: 15.0, description: 'Commuting cost per kilometer rate' })
-  @IsNumber()
-  @IsPositive()
-  costPerKm: number;
+  @ApiProperty({ example: '123 Main Street', description: 'Office address' })
+  @IsString()
+  @IsNotEmpty()
+  address: string;
+
+  @ApiProperty({ example: 'Bengaluru', description: 'City' })
+  @IsString()
+  @IsNotEmpty()
+  city: string;
+
+  @ApiProperty({ example: 'Karnataka', description: 'State / Province' })
+  @IsString()
+  @IsNotEmpty()
+  state: string;
+
+  @ApiProperty({ example: 'India', description: 'Country' })
+  @IsString()
+  @IsNotEmpty()
+  country: string;
 }

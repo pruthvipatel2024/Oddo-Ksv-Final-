@@ -148,7 +148,7 @@ export class UsersService {
     ]);
 
     const totalRides = await this.prisma.ride.count({ where: { organizationId: orgId, status: 'COMPLETED' } });
-    const totalBookings = await this.prisma.booking.count({ where: { ride: { organizationId: orgId }, status: 'COMPLETED' } });
+    const totalBookings = await this.prisma.booking.count({ where: { ride: { organizationId: orgId }, status: 'CONFIRMED' } });
     
     const completedTrips = await this.prisma.trip.findMany({
       where: { ride: { organizationId: orgId }, status: 'COMPLETED' },
