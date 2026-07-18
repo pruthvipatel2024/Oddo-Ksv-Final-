@@ -2,9 +2,10 @@ export interface Employee {
   id: string;
   name: string;
   email: string;
+  department: string;
+  manager: string;
   location: string;
   platformAccess: 'Granted' | 'Revoked';
-  rating: number;
   mobileNumber: string;
   memberSince: string;
 }

@@ -7,9 +7,10 @@ import { validateEmail, validateRequired, validatePositiveInteger, validatePosit
 interface SettingsTabProps {
   settings: Settings;
   onSaveSettings: (updatedSettings: Settings) => void;
+  theme: 'light' | 'dark';
 }
 
-export default function SettingsTab({ settings, onSaveSettings }: SettingsTabProps) {
+export default function SettingsTab({ settings, onSaveSettings, theme }: SettingsTabProps) {
   const [formData, setFormData] = useState<Settings>({ ...settings });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -115,164 +116,157 @@ export default function SettingsTab({ settings, onSaveSettings }: SettingsTabPro
     }, 800);
   };
 
+  const borderClass = theme === 'dark'
+    ? 'border-zinc-700 hover:border-zinc-500 focus:border-sky-500 text-zinc-150'
+    : 'border-slate-200 hover:border-slate-400 focus:border-sky-600 text-slate-800';
+
+  const labelClass = theme === 'dark' ? 'text-zinc-400' : 'text-slate-500';
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-10 max-w-5xl py-4">
+    <form onSubmit={handleSubmit} className="space-y-10 max-w-5xl py-4 animate-in fade-in duration-300">
       {/* Company Details section */}
-      <div className="space-y-6">
-        <h3 className="text-base font-semibold text-sky-400 border-b border-zinc-800 pb-2">
+      <div className={`p-6 rounded-2xl border transition-colors ${
+        theme === 'dark' ? 'bg-zinc-950/40 border-zinc-800' : 'bg-white border-slate-200 shadow-md'
+      }`}>
+        <h3 className={`text-sm font-bold uppercase tracking-wider mb-6 pb-2 border-b ${
+          theme === 'dark' ? 'text-sky-400 border-zinc-800' : 'text-sky-600 border-slate-100'
+        }`}>
           Company Details
         </h3>
 
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* Row 1: Company Name & Industry */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16">
             {/* Company Name */}
-            <div className="flex flex-row items-end gap-3">
-              <label className="text-sm font-medium text-zinc-400 min-w-[140px] select-none mb-1">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+              <label className={`text-xs font-bold uppercase tracking-wider min-w-[150px] select-none mb-1.5 ${labelClass}`}>
                 Company Name
               </label>
-              <div className="flex-1 flex flex-col">
+              <div className="flex-1 flex flex-col relative">
                 <input
                   type="text"
                   name="companyName"
                   value={formData.companyName}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className={`w-full bg-transparent border-0 border-b pb-1 text-sm text-zinc-100 focus:outline-none focus:ring-0 focus:border-sky-500 transition-colors ${
-                    errors.companyName && touched.companyName
-                      ? 'border-rose-500/50'
-                      : 'border-zinc-700 hover:border-zinc-600'
-                  }`}
+                  className={`w-full bg-transparent border-0 border-b pb-1 text-sm font-semibold focus:outline-none focus:ring-0 transition-colors ${borderClass}`}
                 />
                 {errors.companyName && touched.companyName && (
-                  <p className="text-[11px] text-rose-500 mt-1 absolute translate-y-6">{errors.companyName}</p>
+                  <p className="text-[10px] font-bold text-rose-500 mt-1 absolute translate-y-6">{errors.companyName}</p>
                 )}
               </div>
             </div>
 
             {/* Industry */}
-            <div className="flex flex-row items-end gap-3">
-              <label className="text-sm font-medium text-zinc-400 min-w-[140px] select-none mb-1">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+              <label className={`text-xs font-bold uppercase tracking-wider min-w-[150px] select-none mb-1.5 ${labelClass}`}>
                 Industry
               </label>
-              <div className="flex-1 flex flex-col">
+              <div className="flex-1 flex flex-col relative">
                 <input
                   type="text"
                   name="industry"
                   value={formData.industry}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className={`w-full bg-transparent border-0 border-b pb-1 text-sm text-zinc-100 focus:outline-none focus:ring-0 focus:border-sky-500 transition-colors ${
-                    errors.industry && touched.industry
-                      ? 'border-rose-500/50'
-                      : 'border-zinc-700 hover:border-zinc-600'
-                  }`}
+                  className={`w-full bg-transparent border-0 border-b pb-1 text-sm font-semibold focus:outline-none focus:ring-0 transition-colors ${borderClass}`}
                 />
                 {errors.industry && touched.industry && (
-                  <p className="text-[11px] text-rose-500 mt-1 absolute translate-y-6">{errors.industry}</p>
+                  <p className="text-[10px] font-bold text-rose-500 mt-1 absolute translate-y-6">{errors.industry}</p>
                 )}
               </div>
             </div>
           </div>
 
           {/* Row 2: Registered Address & Admin Contact */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 pt-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16">
             {/* Registered Address */}
-            <div className="flex flex-row items-end gap-3">
-              <label className="text-sm font-medium text-zinc-400 min-w-[140px] select-none mb-1">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+              <label className={`text-xs font-bold uppercase tracking-wider min-w-[150px] select-none mb-1.5 ${labelClass}`}>
                 Registered Address
               </label>
-              <div className="flex-1 flex flex-col">
+              <div className="flex-1 flex flex-col relative">
                 <input
                   type="text"
                   name="registeredAddress"
                   value={formData.registeredAddress}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className={`w-full bg-transparent border-0 border-b pb-1 text-sm text-zinc-100 focus:outline-none focus:ring-0 focus:border-sky-500 transition-colors ${
-                    errors.registeredAddress && touched.registeredAddress
-                      ? 'border-rose-500/50'
-                      : 'border-zinc-700 hover:border-zinc-600'
-                  }`}
+                  className={`w-full bg-transparent border-0 border-b pb-1 text-sm font-semibold focus:outline-none focus:ring-0 transition-colors ${borderClass}`}
                 />
                 {errors.registeredAddress && touched.registeredAddress && (
-                  <p className="text-[11px] text-rose-500 mt-1 absolute translate-y-6">{errors.registeredAddress}</p>
+                  <p className="text-[10px] font-bold text-rose-500 mt-1 absolute translate-y-6">{errors.registeredAddress}</p>
                 )}
               </div>
             </div>
 
             {/* Admin Contact */}
-            <div className="flex flex-row items-end gap-3">
-              <label className="text-sm font-medium text-zinc-400 min-w-[140px] select-none mb-1">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+              <label className={`text-xs font-bold uppercase tracking-wider min-w-[150px] select-none mb-1.5 ${labelClass}`}>
                 Admin Contact
               </label>
-              <div className="flex-1 flex flex-col">
+              <div className="flex-1 flex flex-col relative">
                 <input
                   type="email"
                   name="adminContact"
                   value={formData.adminContact}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className={`w-full bg-transparent border-0 border-b pb-1 text-sm text-zinc-100 focus:outline-none focus:ring-0 focus:border-sky-500 transition-colors ${
-                    errors.adminContact && touched.adminContact
-                      ? 'border-rose-500/50'
-                      : 'border-zinc-700 hover:border-zinc-600'
-                  }`}
+                  className={`w-full bg-transparent border-0 border-b pb-1 text-sm font-semibold focus:outline-none focus:ring-0 transition-colors ${borderClass}`}
                 />
                 {errors.adminContact && touched.adminContact && (
-                  <p className="text-[11px] text-rose-500 mt-1 absolute translate-y-6">{errors.adminContact}</p>
+                  <p className="text-[10px] font-bold text-rose-500 mt-1 absolute translate-y-6">{errors.adminContact}</p>
                 )}
               </div>
             </div>
           </div>
 
           {/* Row 3: Registered Employees */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 pt-2">
-            <div className="flex flex-row items-end gap-3">
-              <label className="text-sm font-medium text-zinc-400 min-w-[140px] select-none mb-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+              <label className={`text-xs font-bold uppercase tracking-wider min-w-[150px] select-none mb-1.5 ${labelClass}`}>
                 Registered Employees
               </label>
-              <div className="flex-1 flex flex-col">
+              <div className="flex-1 flex flex-col relative">
                 <input
                   type="number"
                   name="registeredEmployees"
                   value={formData.registeredEmployees}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className={`w-full bg-transparent border-0 border-b pb-1 text-sm text-zinc-100 focus:outline-none focus:ring-0 focus:border-sky-500 transition-colors ${
-                    errors.registeredEmployees && touched.registeredEmployees
-                      ? 'border-rose-500/50'
-                      : 'border-zinc-700 hover:border-zinc-600'
-                  }`}
+                  className={`w-full bg-transparent border-0 border-b pb-1 text-sm font-semibold focus:outline-none focus:ring-0 transition-colors ${borderClass}`}
                 />
                 {errors.registeredEmployees && touched.registeredEmployees && (
-                  <p className="text-[11px] text-rose-500 mt-1 absolute translate-y-6">{errors.registeredEmployees}</p>
+                  <p className="text-[10px] font-bold text-rose-500 mt-1 absolute translate-y-6">{errors.registeredEmployees}</p>
                 )}
               </div>
             </div>
-            {/* Blank column on the right side */}
             <div className="hidden md:block"></div>
           </div>
         </div>
       </div>
 
       {/* Carpooling Configuration section */}
-      <div className="space-y-6 pt-6">
-        <h3 className="text-base font-semibold text-sky-400 border-b border-zinc-800 pb-2">
+      <div className={`p-6 rounded-2xl border transition-colors ${
+        theme === 'dark' ? 'bg-zinc-950/40 border-zinc-800' : 'bg-white border-slate-200 shadow-md'
+      }`}>
+        <h3 className={`text-sm font-bold uppercase tracking-wider mb-6 pb-2 border-b ${
+          theme === 'dark' ? 'text-sky-400 border-zinc-800' : 'text-sky-600 border-slate-100'
+        }`}>
           Carpooling Configuration
         </h3>
 
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* Row 1: Fuel Cost & Cost Per KM */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16">
             {/* Fuel Cost / Liter */}
-            <div className="flex flex-row items-end gap-3">
-              <label className="text-sm font-medium text-zinc-400 min-w-[140px] select-none mb-1">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+              <label className={`text-xs font-bold uppercase tracking-wider min-w-[150px] select-none mb-1.5 ${labelClass}`}>
                 Fuel Cost / Liter
               </label>
-              <div className="flex-1 flex flex-col">
+              <div className="flex-1 flex flex-col relative">
                 <div className="relative flex items-center">
-                  <span className="text-zinc-500 text-sm absolute left-0 bottom-1.5 select-none">Rs.</span>
+                  <span className="text-zinc-500 text-sm absolute left-0 bottom-1 select-none">Rs.</span>
                   <input
                     type="number"
                     step="0.01"
@@ -280,27 +274,23 @@ export default function SettingsTab({ settings, onSaveSettings }: SettingsTabPro
                     value={formData.fuelCost}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    className={`w-full bg-transparent border-0 border-b pl-7 pb-1 text-sm text-zinc-100 focus:outline-none focus:ring-0 focus:border-sky-500 transition-colors ${
-                      errors.fuelCost && touched.fuelCost
-                        ? 'border-rose-500/50'
-                        : 'border-zinc-700 hover:border-zinc-600'
-                    }`}
+                    className={`w-full bg-transparent border-0 border-b pl-7 pb-1 text-sm font-semibold focus:outline-none focus:ring-0 transition-colors ${borderClass}`}
                   />
                 </div>
                 {errors.fuelCost && touched.fuelCost && (
-                  <p className="text-[11px] text-rose-500 mt-1 absolute translate-y-6">{errors.fuelCost}</p>
+                  <p className="text-[10px] font-bold text-rose-500 mt-1 absolute translate-y-6">{errors.fuelCost}</p>
                 )}
               </div>
             </div>
 
             {/* Cost Per KM */}
-            <div className="flex flex-row items-end gap-3">
-              <label className="text-sm font-medium text-zinc-400 min-w-[140px] select-none mb-1">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+              <label className={`text-xs font-bold uppercase tracking-wider min-w-[150px] select-none mb-1.5 ${labelClass}`}>
                 Cost Per KM
               </label>
-              <div className="flex-1 flex flex-col">
+              <div className="flex-1 flex flex-col relative">
                 <div className="relative flex items-center">
-                  <span className="text-zinc-500 text-sm absolute left-0 bottom-1.5 select-none">Rs.</span>
+                  <span className="text-zinc-500 text-sm absolute left-0 bottom-1 select-none">Rs.</span>
                   <input
                     type="number"
                     step="0.01"
@@ -308,30 +298,26 @@ export default function SettingsTab({ settings, onSaveSettings }: SettingsTabPro
                     value={formData.costPerKm}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    className={`w-full bg-transparent border-0 border-b pl-7 pb-1 text-sm text-zinc-100 focus:outline-none focus:ring-0 focus:border-sky-500 transition-colors ${
-                      errors.costPerKm && touched.costPerKm
-                        ? 'border-rose-500/50'
-                        : 'border-zinc-700 hover:border-zinc-600'
-                    }`}
+                    className={`w-full bg-transparent border-0 border-b pl-7 pb-1 text-sm font-semibold focus:outline-none focus:ring-0 transition-colors ${borderClass}`}
                   />
                 </div>
                 {errors.costPerKm && touched.costPerKm && (
-                  <p className="text-[11px] text-rose-500 mt-1 absolute translate-y-6">{errors.costPerKm}</p>
+                  <p className="text-[10px] font-bold text-rose-500 mt-1 absolute translate-y-6">{errors.costPerKm}</p>
                 )}
               </div>
             </div>
           </div>
 
           {/* Row 2: Travel Cost (Operational) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 pt-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16">
             {/* Travel Cost (Operational) */}
-            <div className="flex flex-row items-end gap-3">
-              <label className="text-sm font-medium text-zinc-400 min-w-[140px] select-none mb-1">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+              <label className={`text-xs font-bold uppercase tracking-wider min-w-[150px] select-none mb-1.5 ${labelClass}`}>
                 Travel Cost (Operational)
               </label>
-              <div className="flex-1 flex flex-col">
+              <div className="flex-1 flex flex-col relative">
                 <div className="relative flex items-center">
-                  <span className="text-zinc-500 text-sm absolute left-0 bottom-1.5 select-none">Rs.</span>
+                  <span className="text-zinc-500 text-sm absolute left-0 bottom-1 select-none">Rs.</span>
                   <input
                     type="number"
                     step="0.01"
@@ -339,36 +325,31 @@ export default function SettingsTab({ settings, onSaveSettings }: SettingsTabPro
                     value={formData.travelCostOperational}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    className={`w-full bg-transparent border-0 border-b pl-7 pr-12 pb-1 text-sm text-zinc-100 focus:outline-none focus:ring-0 focus:border-sky-500 transition-colors ${
-                      errors.travelCostOperational && touched.travelCostOperational
-                        ? 'border-rose-500/50'
-                        : 'border-zinc-700 hover:border-zinc-600'
-                    }`}
+                    className={`w-full bg-transparent border-0 border-b pl-7 pr-12 pb-1 text-sm font-semibold focus:outline-none focus:ring-0 transition-colors ${borderClass}`}
                   />
-                  <span className="text-zinc-500 text-xs absolute right-0 bottom-1.5 select-none">/ Km</span>
+                  <span className="text-zinc-500 text-xs absolute right-0 bottom-1 select-none">/ Km</span>
                 </div>
                 {errors.travelCostOperational && touched.travelCostOperational && (
-                  <p className="text-[11px] text-rose-500 mt-1 absolute translate-y-6">{errors.travelCostOperational}</p>
+                  <p className="text-[10px] font-bold text-rose-500 mt-1 absolute translate-y-6">{errors.travelCostOperational}</p>
                 )}
               </div>
             </div>
-            {/* Blank column on the right side */}
             <div className="hidden md:block"></div>
           </div>
         </div>
       </div>
 
       {/* Submit / Status Bar */}
-      <div className="flex items-center gap-4 pt-8 mt-4">
+      <div className="flex items-center gap-4">
         <button
           type="submit"
           disabled={saveStatus !== 'idle'}
-          className={`inline-flex items-center justify-center px-6 py-2 text-xs font-semibold uppercase tracking-wider rounded border transition-all duration-200 active:scale-95 cursor-pointer ${
+          className={`inline-flex items-center justify-center px-6 py-3 text-xs font-bold uppercase tracking-wider rounded-lg border transition-all active:scale-95 cursor-pointer ${
             saveStatus === 'saving'
-              ? 'bg-zinc-800 text-zinc-500 border-zinc-800 cursor-not-allowed'
+              ? 'bg-zinc-800 text-zinc-500 border-zinc-850 cursor-not-allowed'
               : saveStatus === 'saved'
-              ? 'bg-emerald-600 text-white border-emerald-600'
-              : 'bg-transparent text-sky-400 border-sky-500/40 hover:border-sky-500 hover:bg-sky-500/5'
+              ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-500/20'
+              : 'bg-sky-600 text-white border-sky-600 hover:bg-sky-500 shadow-lg hover:shadow-sky-500/10'
           }`}
         >
           {saveStatus === 'saving' && (
