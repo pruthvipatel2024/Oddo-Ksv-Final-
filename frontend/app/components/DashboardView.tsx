@@ -299,10 +299,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
       const tripId = selectedDriver.tripId;
       const token = localStorage.getItem("accessToken");
 
-      const chatSocket = io("http://localhost:5000/chat", {
+      const chatSocket = io("http://localhost:3000/chat", {
         auth: { token }
       });
-      const trackingSocket = io("http://localhost:5000/tracking", {
+      const trackingSocket = io("http://localhost:3000/tracking", {
         auth: { token }
       });
 
