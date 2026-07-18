@@ -8,13 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/ui/icons";
 import { useWallet } from "@/hooks/useWallet";
 
+<<<<<<< HEAD
 type Method = "card" | "upi" | "netbanking" | "cash";
+=======
+type Method = "card" | "upi" | "netbanking";
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
 
 const methods: { id: Method; label: string; hint: string }[] = [
   { id: "upi", label: "UPI", hint: "UPI ID or QR scan" },
   { id: "card", label: "Card", hint: "Debit or credit card" },
   { id: "netbanking", label: "Net Banking", hint: "Pay via your bank" },
+<<<<<<< HEAD
   { id: "cash", label: "Cash", hint: "Add cash at a kiosk" },
+=======
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
 ];
 
 const banks = ["HDFC Bank", "ICICI Bank", "SBI", "Axis Bank", "Kotak Mahindra"];
@@ -108,7 +115,11 @@ export default function WalletPage() {
               {/* Step 2: method */}
               <div>
                 <span className="mb-1.5 block text-sm font-medium text-ink-600 dark:text-ink-300">Payment method</span>
+<<<<<<< HEAD
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+=======
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
                   {methods.map((m) => (
                     <button
                       type="button"
@@ -203,6 +214,7 @@ export default function WalletPage() {
                 </div>
               )}
 
+<<<<<<< HEAD
               {method === "cash" && (
                 <div className="flex flex-col gap-2 rounded-xl border border-dashed border-ink-200 p-4 text-sm dark:border-ink-700">
                   <p className="font-medium text-ink-700 dark:text-ink-200">Add cash at a partner kiosk</p>
@@ -217,6 +229,10 @@ export default function WalletPage() {
 
               <Button type="submit" className="w-full" size="lg" disabled={isRecharging}>
                 {isRecharging ? "Processing..." : method === "cash" ? "Generate Reference Code" : `Add ₹${amount}`}
+=======
+              <Button type="submit" className="w-full" size="lg" disabled={isRecharging}>
+                {isRecharging ? "Processing..." : `Add ₹${amount}`}
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
               </Button>
               <p className="text-center text-xs text-ink-400">Payments are encrypted and processed securely.</p>
             </form>

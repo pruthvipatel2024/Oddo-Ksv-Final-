@@ -12,6 +12,7 @@ export interface UserProfile {
   userType: 'INTERNAL' | 'EXTERNAL';
   status: 'ACTIVE' | 'SUSPENDED' | 'PENDING';
   avatar?: string;
+  lastLogin?: string;
 }
 
 export const usersApi = {
@@ -32,4 +33,7 @@ export const usersApi = {
 
   findOne: (id: string) => 
     apiClient.get<{ success: boolean; data: UserProfile }>(`/users/${id}`),
+
+  changePassword: (payload: any) => 
+    apiClient.patch<{ success: boolean; message: string }>('/users/change-password', payload),
 };

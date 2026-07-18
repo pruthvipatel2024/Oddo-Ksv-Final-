@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Icons } from "@/components/ui/icons";
 import { useVehicles } from "@/hooks/useVehicles";
+<<<<<<< HEAD
 import { vehicleCatalog } from "@/lib/mock-data";
 
 export default function MyVehiclePage() {
@@ -15,10 +16,20 @@ export default function MyVehiclePage() {
   const [selectedModel, setSelectedModel] = useState(vehicleCatalog[0].model);
   const [regNo, setRegNo] = useState("");
   const [color, setColor] = useState("White");
+=======
+export default function MyVehiclePage() {
+  const { vehicles, createVehicle, deleteVehicle, isLoading, isCreating } = useVehicles();
+  const [adding, setAdding] = useState(false);
+  const [modelName, setModelName] = useState("");
+  const [seatingCapacity, setSeatingCapacity] = useState<number | "">("");
+  const [regNo, setRegNo] = useState("");
+  const [color, setColor] = useState("");
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
 
   // Get the first registered vehicle
   const activeVehicle = vehicles[0] || null;
 
+<<<<<<< HEAD
   const selected = vehicleCatalog.find((v) => v.model === selectedModel)!;
 
   const getManufacturer = (modelName: string) => {
@@ -26,17 +37,33 @@ export default function MyVehiclePage() {
     if (modelName.includes("Innova")) return "Toyota";
     if (modelName.includes("City")) return "Honda";
     if (modelName.includes("Nexon")) return "Tata";
+=======
+  const getManufacturer = (modelName: string) => {
+    const lowerModel = modelName.toLowerCase();
+    if (lowerModel.includes("swift") || lowerModel.includes("alto") || lowerModel.includes("baleno") || lowerModel.includes("ertiga")) return "Suzuki";
+    if (lowerModel.includes("innova")) return "Toyota";
+    if (lowerModel.includes("city")) return "Honda";
+    if (lowerModel.includes("nexon")) return "Tata";
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
     return "Other";
   };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
+<<<<<<< HEAD
+=======
+    if (!modelName.trim()) return;
+    if (seatingCapacity === "" || isNaN(Number(seatingCapacity)) || Number(seatingCapacity) <= 0) {
+      return;
+    }
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
     try {
       // If there is already a vehicle, remove it first
       if (activeVehicle) {
         await deleteVehicle(activeVehicle.id);
       }
       await createVehicle({
+<<<<<<< HEAD
         manufacturer: getManufacturer(selectedModel),
         model: selectedModel,
         color: color.trim(),
@@ -46,6 +73,19 @@ export default function MyVehiclePage() {
       setAdding(false);
       setRegNo("");
       setColor("White");
+=======
+        manufacturer: getManufacturer(modelName),
+        model: modelName.trim(),
+        color: color.trim(),
+        registrationNumber: regNo.toUpperCase().trim(),
+        seatingCapacity: Number(seatingCapacity),
+      });
+      setAdding(false);
+      setModelName("");
+      setSeatingCapacity("");
+      setRegNo("");
+      setColor("");
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
     } catch (err) {
       console.error("Failed to add vehicle", err);
     }
@@ -137,6 +177,7 @@ export default function MyVehiclePage() {
             <h2 className="font-display text-lg font-bold text-ink-800 dark:text-white">
               {activeVehicle ? "Change Vehicle" : "Add Vehicle"}
             </h2>
+<<<<<<< HEAD
             <p className="mb-5 text-sm text-ink-400">Choose your vehicle from the list — seats fill in automatically.</p>
 
             <form className="flex flex-col gap-4" onSubmit={handleAdd}>
@@ -173,6 +214,32 @@ export default function MyVehiclePage() {
                   </button>
                 ))}
               </div>
+=======
+            <p className="mb-5 text-sm text-ink-400">Enter your vehicle details below.</p>
+
+            <form className="flex flex-col gap-4" onSubmit={handleAdd}>
+              <Input
+                label="Vehicle model"
+                placeholder="e.g. Swift Dzire, Innova Crysta"
+                value={modelName}
+                onChange={(e) => setModelName(e.target.value)}
+                required
+              />
+
+              <Input
+                label="Seating capacity"
+                type="number"
+                min={1}
+                max={10}
+                placeholder="e.g. 4"
+                value={seatingCapacity}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSeatingCapacity(val === "" ? "" : Number(val));
+                }}
+                required
+              />
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
 
               <div className="grid grid-cols-2 gap-4">
                 <Input
@@ -191,11 +258,15 @@ export default function MyVehiclePage() {
                 />
               </div>
 
+<<<<<<< HEAD
               <div className="rounded-xl border border-ink-100 px-4 py-3 text-sm text-ink-500 dark:border-ink-800 dark:text-ink-400">
                 Seating capacity: <span className="font-semibold text-ink-700 dark:text-ink-200">{selected.seats}</span> (auto-filled from model)
               </div>
 
               <div className="flex gap-3">
+=======
+              <div className="flex gap-3 mt-2">
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
                 <Button type="button" variant="secondary" className="flex-1" onClick={() => setAdding(false)}>
                   Cancel
                 </Button>

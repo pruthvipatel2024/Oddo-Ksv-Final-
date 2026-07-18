@@ -4,12 +4,20 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
+<<<<<<< HEAD
 import { Card } from "@/components/ui/card";
+=======
+import { Card, Badge } from "@/components/ui/card";
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Icons } from "@/components/ui/icons";
 import { useProfile } from "@/hooks/useProfile";
 import { useSession } from "@/context/SessionContext";
+<<<<<<< HEAD
+=======
+import { usersApi } from "@/src/services/api/users.api";
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
   return (
@@ -17,13 +25,22 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void 
       role="switch"
       aria-checked={checked}
       onClick={onChange}
+<<<<<<< HEAD
       className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+=======
+      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors focus:outline-none ${
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
         checked ? "bg-teal-500" : "bg-ink-200 dark:bg-ink-700"
       }`}
     >
       <span
+<<<<<<< HEAD
         className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
           checked ? "translate-x-5" : "translate-x-0.5"
+=======
+        className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+          checked ? "translate-x-5" : "translate-x-0"
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
         }`}
       />
     </button>
@@ -36,12 +53,20 @@ function SettingsRow({
   sublabel,
   right,
   href,
+<<<<<<< HEAD
+=======
+  onClick,
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
 }: {
   icon: (p?: any) => React.ReactNode;
   label: string;
   sublabel?: string;
   right?: React.ReactNode;
   href?: string;
+<<<<<<< HEAD
+=======
+  onClick?: () => void;
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
 }) {
   const content = (
     <div className="flex items-center justify-between gap-3 px-5 py-3.5">
@@ -49,7 +74,11 @@ function SettingsRow({
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-ink-100 text-ink-500 dark:bg-ink-800 dark:text-ink-300">
           <Icon width={16} height={16} />
         </div>
+<<<<<<< HEAD
         <div>
+=======
+        <div className="text-left">
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
           <p className="text-sm font-medium text-ink-800 dark:text-ink-100">{label}</p>
           {sublabel && <p className="text-xs text-ink-400">{sublabel}</p>}
         </div>
@@ -62,6 +91,7 @@ function SettingsRow({
     </div>
   );
 
+<<<<<<< HEAD
   return href ? (
     <Link href={href} className="block transition-colors hover:bg-ink-50/60 dark:hover:bg-ink-800/40">
       {content}
@@ -69,6 +99,29 @@ function SettingsRow({
   ) : (
     <div>{content}</div>
   );
+=======
+  if (href) {
+    return (
+      <Link href={href} className="block transition-colors hover:bg-ink-50/60 dark:hover:bg-ink-800/40">
+        {content}
+      </Link>
+    );
+  }
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="block w-full transition-colors hover:bg-ink-50/60 dark:hover:bg-ink-800/40 cursor-pointer focus:outline-none animate-none"
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return <div>{content}</div>;
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
 }
 
 export default function SettingsPage() {
@@ -85,6 +138,24 @@ export default function SettingsPage() {
   const [promotions, setPromotions] = useState(false);
   const [rideReminders, setRideReminders] = useState(true);
 
+<<<<<<< HEAD
+=======
+  // Modal states
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showSessionModal, setShowSessionModal] = useState(false);
+
+  // Change password states
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [pwdError, setPwdError] = useState("");
+  const [pwdSuccess, setPwdSuccess] = useState("");
+  const [pwdLoading, setPwdLoading] = useState(false);
+
+  // Device info states
+  const [deviceInfo, setDeviceInfo] = useState("Unknown Device");
+
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
   // Sync state with fetched profile data
   useEffect(() => {
     if (profile) {
@@ -94,6 +165,30 @@ export default function SettingsPage() {
     }
   }, [profile]);
 
+<<<<<<< HEAD
+=======
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const ua = window.navigator.userAgent;
+      let browser = "Browser";
+      let os = "OS";
+
+      if (ua.includes("Chrome")) browser = "Chrome";
+      else if (ua.includes("Firefox")) browser = "Firefox";
+      else if (ua.includes("Safari")) browser = "Safari";
+      else if (ua.includes("Edge")) browser = "Edge";
+
+      if (ua.includes("Windows")) os = "Windows";
+      else if (ua.includes("Macintosh")) os = "macOS";
+      else if (ua.includes("Linux")) os = "Linux";
+      else if (ua.includes("Android")) os = "Android";
+      else if (ua.includes("iPhone")) os = "iOS";
+
+      setDeviceInfo(`${browser} on ${os}`);
+    }
+  }, []);
+
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const nameParts = name.trim().split(" ");
@@ -121,6 +216,45 @@ export default function SettingsPage() {
     }
   };
 
+<<<<<<< HEAD
+=======
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwdError("");
+    setPwdSuccess("");
+
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      setPwdError("All fields are required");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPwdError("New password must be at least 6 characters long");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPwdError("Passwords do not match");
+      return;
+    }
+
+    setPwdLoading(true);
+    try {
+      await usersApi.changePassword({ oldPassword, newPassword });
+      setPwdSuccess("Password updated successfully!");
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      console.error(err);
+      const errMsg = err.response?.data?.message || "Failed to update password. Please check your credentials.";
+      setPwdError(errMsg);
+    } finally {
+      setPwdLoading(false);
+    }
+  };
+
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
   return (
     <AppShell title="Settings">
       <div className="mx-auto flex max-w-xl flex-col gap-6">
@@ -201,8 +335,23 @@ export default function SettingsPage() {
         <Card className="overflow-hidden">
           <p className="px-5 pt-4 text-xs font-semibold uppercase tracking-wide text-ink-400">Security</p>
           <div className="divide-y divide-ink-50 dark:divide-ink-800">
+<<<<<<< HEAD
             <SettingsRow icon={Icons.lock} label="Change Password" sublabel="Update your login password" />
             <SettingsRow icon={Icons.users} label="Login Sessions" sublabel="Manage active devices" />
+=======
+            <SettingsRow
+              icon={Icons.lock}
+              label="Change Password"
+              sublabel="Update your login password"
+              onClick={() => setShowPasswordModal(true)}
+            />
+            <SettingsRow
+              icon={Icons.users}
+              label="Login Sessions"
+              sublabel="Manage active devices"
+              onClick={() => setShowSessionModal(true)}
+            />
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
           </div>
         </Card>
 
@@ -217,6 +366,133 @@ export default function SettingsPage() {
 
         <Button variant="danger" className="w-full" onClick={handleLogout}>Log Out</Button>
       </div>
+<<<<<<< HEAD
+=======
+
+      {/* Change Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-md p-6 bg-white dark:bg-ink-900 animate-fade-up">
+            <h3 className="font-display text-lg font-bold text-ink-800 dark:text-white">Change Password</h3>
+            <p className="text-xs text-ink-400 mb-4">Update your account login password</p>
+
+            {pwdError && (
+              <div className="mb-4 rounded-lg bg-danger/10 p-3 text-xs font-medium text-danger">
+                {pwdError}
+              </div>
+            )}
+            {pwdSuccess && (
+              <div className="mb-4 rounded-lg bg-teal-500/10 p-3 text-xs font-medium text-teal-600 dark:text-teal-400">
+                {pwdSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handlePasswordChange} className="flex flex-col gap-4">
+              <Input
+                label="Current Password"
+                type="password"
+                value={oldPassword}
+                onChange={(e) => setOldPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+              />
+              <Input
+                label="New Password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+              />
+              <Input
+                label="Confirm New Password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+              />
+
+              <div className="flex gap-3 mt-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowPasswordModal(false);
+                    setPwdError("");
+                    setPwdSuccess("");
+                    setOldPassword("");
+                    setNewPassword("");
+                    setConfirmPassword("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" className="flex-1" disabled={pwdLoading}>
+                  {pwdLoading ? "Updating..." : "Update Password"}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* Login Sessions Modal */}
+      {showSessionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-md p-6 bg-white dark:bg-ink-900 animate-fade-up">
+            <h3 className="font-display text-lg font-bold text-ink-800 dark:text-white">Active Sessions</h3>
+            <p className="text-xs text-ink-400 mb-5">Devices currently logged into your account</p>
+
+            <div className="flex flex-col gap-4">
+              <div className="flex items-start gap-3 rounded-xl border border-teal-500/25 bg-teal-50/5 p-4 dark:border-teal-500/20">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-100 text-teal-600 dark:bg-teal-500/10 dark:text-teal-300">
+                  <Icons.users width={18} height={18} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-ink-800 dark:text-white">
+                    {deviceInfo}
+                  </p>
+                  <p className="text-xs text-ink-500 dark:text-ink-400 mt-0.5">
+                    Active Session (Current Device)
+                  </p>
+                  {profile?.lastLogin && (
+                    <p className="text-[10px] text-ink-400 mt-1">
+                      Last logged in: {new Date(profile.lastLogin).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+                <Badge tone="teal">Active</Badge>
+              </div>
+
+              <div className="text-xs text-ink-500 dark:text-ink-400 mt-2 bg-ink-50 dark:bg-ink-950 p-3 rounded-lg leading-relaxed">
+                ℹ️ To secure your account, you can revoke access from this device at any time. This will clear the session refresh tokens and log you out.
+              </div>
+
+              <div className="flex gap-3 mt-4">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => setShowSessionModal(false)}
+                >
+                  Close
+                </Button>
+                <Button
+                  type="button"
+                  variant="danger"
+                  className="flex-1"
+                  onClick={handleLogout}
+                >
+                  Revoke &amp; Logout
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+>>>>>>> 3de08a7cd47a1e32b768d64f5b93e40265f4b318
     </AppShell>
   );
 }

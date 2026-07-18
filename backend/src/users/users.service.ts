@@ -1,7 +1,8 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { User, Prisma, UserStatus } from '@prisma/client';
 import { UsersRepository } from './users.repository';
 import { PrismaService } from '../database/prisma.service';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
@@ -69,6 +70,26 @@ export class UsersService {
    */
   async updateRefreshToken(id: string, refreshTokenHash: string | null): Promise<void> {
     await this.usersRepository.update(id, { refreshTokenHash });
+  }
+
+  /**
+   * Change user password.
+   */
+  async changePassword(id: string, oldPassword: string, newPassword: string): Promise<void> {
+    const user = await this.usersRepository.findById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isPasswordValid = await bcrypt.compare(oldPassword, user.passwordHash);
+    if (!isPasswordValid) {
+      throw new BadRequestException('Incorrect current password');
+    }
+
+    const saltRounds = 10;
+    const newPasswordHash = await bcrypt.hash(newPassword, saltRounds);
+
+    await this.usersRepository.update(id, { passwordHash: newPasswordHash });
   }
 
   /**
