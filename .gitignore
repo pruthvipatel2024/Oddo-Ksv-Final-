@@ -1,25 +1,18 @@
-# dependencies
+# Local environment variables containing secrets
+.env
+.env.local
+
+# Dependency directories
 node_modules/
-frontend/node_modules/
+jspm_packages/
 
-# testing
-coverage/
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# next.js
-.next/
-frontend/.next/
-
-# production
-build/
-out/
-
-# typescript
-*.tsbuildinfo
-frontend/tsconfig.tsbuildinfo
-
-# env files
-.env*
-
-# OS files
+# OS metadata files
 .DS_Store
 Thumbs.db
