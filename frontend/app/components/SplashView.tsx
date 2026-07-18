@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { ThemeToggle } from "./ThemeToggle";
 import { ArrowRight } from "lucide-react";
 
 interface SplashViewProps {
@@ -26,14 +27,19 @@ export const SplashView: React.FC<SplashViewProps> = ({ onStart }) => {
         }}
       />
 
-      {/* Top Brand Name */}
-      <div className="relative z-10 flex items-center gap-2">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-200">
-          <span className="font-sans text-xl font-bold tracking-tight">O</span>
+      {/* Top Brand Name + Theme Toggle container */}
+      <div className="relative z-10 flex w-full max-w-sm items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-200">
+            <span className="font-sans text-xl font-bold tracking-tight">O</span>
+          </div>
+          <span className="font-sans text-xl font-bold tracking-tight text-zinc-800">
+            Carpooling
+          </span>
         </div>
-        <span className="font-sans text-xl font-bold tracking-tight text-zinc-800">
-          Carpooling
-        </span>
+        <div onClick={(e) => e.stopPropagation()}>
+          <ThemeToggle />
+        </div>
       </div>
 
       {/* Center Illustration and Slogans */}

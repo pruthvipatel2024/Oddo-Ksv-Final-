@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { ThemeToggle } from "./ThemeToggle";
 import { Mail, Lock, Eye, EyeOff, ArrowLeft, ArrowRight, User } from "lucide-react";
 
 interface LoginViewProps {
@@ -58,12 +59,15 @@ export const LoginView: React.FC<LoginViewProps> = ({
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-            Welcome
-          </span>
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 border border-zinc-200">
-            <User className="h-4 w-4 text-zinc-600" />
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+              Welcome
+            </span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 border border-zinc-200">
+              <User className="h-4 w-4 text-zinc-600" />
+            </div>
           </div>
         </div>
       </header>

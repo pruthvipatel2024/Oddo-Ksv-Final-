@@ -30,22 +30,206 @@ body {
 }
 
 @keyframes float {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0px);
   }
+
   50% {
     transform: translateY(-12px);
   }
 }
 
 @keyframes shadow {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
     opacity: 0.8;
   }
+
   50% {
     transform: scale(0.85);
     opacity: 0.4;
   }
 }
 
+/* Premium Dark Mode Theme Configuration */
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+.dark {
+  --background: #0a0a0f;
+  --foreground: #f3f4f6;
+}
+
+/* Base body transition for smooth color changes */
+body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dark mode CSS overrides for standard Tailwind utilities */
+.dark .bg-white {
+  background-color: #111119 !important;
+}
+
+.dark .bg-\[\#fcfcfc\] {
+  background-color: #0a0a0f !important;
+}
+
+.dark .bg-\[\#fafafa\] {
+  background-color: #0a0a0f !important;
+}
+
+.dark .bg-\[\#fdfdfd\] {
+  background-color: #0a0a0f !important;
+}
+
+.dark .bg-zinc-50\/50 {
+  background-color: rgba(21, 21, 34, 0.6) !important;
+}
+
+.dark .bg-zinc-50 {
+  background-color: rgba(21, 21, 34, 0.6) !important;
+}
+
+.dark .bg-\[\#fafafa\]\/50 {
+  background-color: rgba(21, 21, 34, 0.45) !important;
+}
+
+.dark .bg-zinc-100 {
+  background-color: #232338 !important;
+}
+
+.dark .hover\:bg-white:hover {
+  background-color: #1e1e2d !important;
+}
+
+.dark .hover\:bg-zinc-50:hover {
+  background-color: #151522 !important;
+}
+
+.dark .hover\:bg-zinc-100:hover {
+  background-color: #232338 !important;
+}
+
+.dark .bg-slate-50\/50 {
+  background-color: rgba(21, 21, 34, 0.4) !important;
+}
+
+.dark .border-zinc-100 {
+  border-color: #1e1e2d !important;
+}
+
+.dark .border-zinc-150 {
+  border-color: #1e1e2d !important;
+}
+
+.dark .border-zinc-200 {
+  border-color: #26263a !important;
+}
+
+.dark .text-zinc-800 {
+  color: #f3f4f6 !important;
+}
+
+.dark .text-zinc-900 {
+  color: #ffffff !important;
+}
+
+.dark .text-zinc-700 {
+  color: #e5e7eb !important;
+}
+
+.dark .text-zinc-600 {
+  color: #9ca3af !important;
+}
+
+.dark .text-zinc-500 {
+  color: #9ca3af !important;
+}
+
+.dark .text-zinc-400 {
+  color: #6b7280 !important;
+}
+
+/* Input Fields in Dark Mode */
+.dark input[type="text"],
+.dark input[type="password"],
+.dark input[type="tel"],
+.dark input[type="email"],
+.dark select {
+  background-color: #14141e !important;
+  border-color: #212130 !important;
+  color: #f3f4f6 !important;
+}
+
+.dark input[type="text"]:focus,
+.dark input[type="password"]:focus,
+.dark input[type="tel"]:focus,
+.dark input[type="email"]:focus,
+.dark select:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15) !important;
+}
+
+/* Dropdowns / Option tags */
+.dark option {
+  background-color: #111119 !important;
+  color: #f3f4f6 !important;
+}
+
+/* Shadows in Dark Mode */
+.dark .shadow-sm {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.4) !important;
+}
+
+.dark .shadow-md {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.45) !important;
+}
+
+.dark .shadow-xl {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.55), 0 10px 10px -5px rgba(0, 0, 0, 0.45) !important;
+}
+
+.dark .shadow-indigo-100 {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Buttons in Dark Mode */
+.dark .bg-zinc-900 {
+
+  color: #0a0a0f !important;
+}
+
+.dark .bg-zinc-900:hover {
+  background-color: rgba(99, 102, 241, 0.15) !important;
+}
+
+.dark .text-white {
+  color: #ffffff !important;
+}
+
+.dark .bg-indigo-50 {
+  background-color: rgba(99, 102, 241, 0.15) !important;
+}
+
+.dark .border-indigo-100 {
+  border-color: rgba(99, 102, 241, 0.3) !important;
+}
+
+/* Specific Chat & Subview details */
+.dark .bg-zinc-150 {
+  background-color: #1e1e2d !important;
+}
+
+.dark .bg-indigo-600 {
+  background-color: #5850ec !important;
+}
+
+.dark .bg-indigo-600:hover {
+  background-color: #6366f1 !important;
+}

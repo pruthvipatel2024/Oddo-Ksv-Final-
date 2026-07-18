@@ -12,6 +12,16 @@ export default function Home() {
   const [view, setView] = useState<ViewState>("splash");
   const [transitioning, setTransitioning] = useState(false);
 
+  React.useEffect(() => {
+    const savedTheme = localStorage.getItem("theme");
+    const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    if (savedTheme === "dark" || (!savedTheme && systemPrefersDark)) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, []);
+
   const changeView = (nextView: ViewState) => {
     setTransitioning(true);
     setTimeout(() => {
