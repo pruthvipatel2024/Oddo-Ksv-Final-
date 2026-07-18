@@ -17,7 +17,6 @@ import {
   Navigation,
   CheckCircle2,
   Calendar,
-  Layers,
   ChevronDown,
   Info,
   Phone,
@@ -67,7 +66,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
 
   // Toggle for booking view (Find Ride vs Offer Ride)
   const [bookingType, setBookingType] = useState<"find" | "offer">("find");
-  
+
   // Toggle for trips tab (Passenger View vs Driver View)
   const [tripsRole, setTripsRole] = useState<"passenger" | "driver">("passenger");
 
@@ -97,7 +96,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
       setVehicleError("Please enter registration plate number.");
       return;
     }
-    
+
     const newVeh: Vehicle = {
       id: Date.now().toString(),
       model: newVehModel.trim(),
@@ -298,7 +297,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
       }
       setWalletBalance((prev) => prev - fare);
     }
-    
+
     // Add to logs
     setWalletLogs((prev) => [
       { id: Date.now(), type: "Debit", desc: `Ride with ${selectedDriver.name} (Paid via ${payMethod.toUpperCase()})`, amount: fare, date: "18 Jul 2026" },
@@ -349,11 +348,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
     const startY = 240;
     const endX = 360;
     const endY = 60;
-    
+
     const currentX = startX + (endX - startX) * (progress / 100);
     const waveOffset = Math.sin((progress / 100) * Math.PI * 2) * 20;
     const currentY = startY + (endY - startY) * (progress / 100) + waveOffset;
-    
+
     return { x: currentX, y: currentY };
   };
 
@@ -377,49 +376,43 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
           <nav className="hidden items-center gap-1 md:flex">
             <button
               onClick={() => { setActiveTab("dashboard"); setBookingStep("find-ride"); }}
-              className={`rounded-lg px-3.5 py-2 text-sm font-bold transition-all ${
-                activeTab === "dashboard" ? "bg-zinc-100 text-indigo-600" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800"
-              }`}
+              className={`rounded-lg px-3.5 py-2 text-sm font-bold transition-all ${activeTab === "dashboard" ? "bg-zinc-100 text-indigo-600" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800"
+                }`}
             >
               Dashboard
             </button>
             <button
               onClick={() => { setActiveTab("trips"); setTripsView("list"); }}
-              className={`rounded-lg px-3.5 py-2 text-sm font-bold transition-all ${
-                activeTab === "trips" ? "bg-zinc-100 text-indigo-600" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800"
-              }`}
+              className={`rounded-lg px-3.5 py-2 text-sm font-bold transition-all ${activeTab === "trips" ? "bg-zinc-100 text-indigo-600" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800"
+                }`}
             >
               My Trips
             </button>
             <button
               onClick={() => { setActiveTab("wallet"); setWalletView("summary"); }}
-              className={`rounded-lg px-3.5 py-2 text-sm font-bold transition-all ${
-                activeTab === "wallet" ? "bg-zinc-100 text-indigo-600" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800"
-              }`}
+              className={`rounded-lg px-3.5 py-2 text-sm font-bold transition-all ${activeTab === "wallet" ? "bg-zinc-100 text-indigo-600" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800"
+                }`}
             >
               Wallet
             </button>
             <button
               onClick={() => setActiveTab("reports")}
-              className={`rounded-lg px-3.5 py-2 text-sm font-bold transition-all ${
-                activeTab === "reports" ? "bg-zinc-100 text-indigo-600" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800"
-              }`}
+              className={`rounded-lg px-3.5 py-2 text-sm font-bold transition-all ${activeTab === "reports" ? "bg-zinc-100 text-indigo-600" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800"
+                }`}
             >
               Reports
             </button>
             <button
               onClick={() => setActiveTab("history")}
-              className={`rounded-lg px-3.5 py-2 text-sm font-bold transition-all ${
-                activeTab === "history" ? "bg-zinc-100 text-indigo-600" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800"
-              }`}
+              className={`rounded-lg px-3.5 py-2 text-sm font-bold transition-all ${activeTab === "history" ? "bg-zinc-100 text-indigo-600" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800"
+                }`}
             >
               Ride History
             </button>
             <button
               onClick={() => setActiveTab("settings")}
-              className={`rounded-lg px-3.5 py-2 text-sm font-bold transition-all ${
-                activeTab === "settings" ? "bg-zinc-100 text-indigo-600" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800"
-              }`}
+              className={`rounded-lg px-3.5 py-2 text-sm font-bold transition-all ${activeTab === "settings" ? "bg-zinc-100 text-indigo-600" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800"
+                }`}
             >
               Setting
             </button>
@@ -445,98 +438,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
 
       {/* Main Core Section */}
       <div className="flex flex-1">
-        
-        {/* Left Side Branding Tab Panel */}
-        <aside className="hidden w-48 flex-col justify-between border-r border-zinc-100 bg-zinc-50/50 p-6 md:flex">
-          <div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500/80">Navigation</span>
-            <div className="mt-4 flex flex-col gap-1.5">
-              <button
-                onClick={() => { setActiveTab("dashboard"); setBookingStep("find-ride"); }}
-                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition-all ${
-                  activeTab === "dashboard" ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "text-zinc-600 hover:bg-zinc-100"
-                }`}
-              >
-                <Layers className="h-4 w-4" />
-                <span>Book Ride</span>
-              </button>
-              <button
-                onClick={() => { setActiveTab("trips"); setTripsView("list"); }}
-                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition-all ${
-                  activeTab === "trips" ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "text-zinc-600 hover:bg-zinc-100"
-                }`}
-              >
-                <Car className="h-4 w-4" />
-                <span>My Trips</span>
-              </button>
-              <button
-                onClick={() => { setActiveTab("wallet"); setWalletView("summary"); }}
-                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition-all ${
-                  activeTab === "wallet" ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "text-zinc-600 hover:bg-zinc-100"
-                }`}
-              >
-                <Wallet className="h-4 w-4" />
-                <span>My Wallet</span>
-              </button>
-              <button
-                onClick={() => setActiveTab("reports")}
-                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition-all ${
-                  activeTab === "reports" ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "text-zinc-600 hover:bg-zinc-100"
-                }`}
-              >
-                <BarChart3 className="h-4 w-4" />
-                <span>Reports</span>
-              </button>
-              <button
-                onClick={() => setActiveTab("history")}
-                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition-all ${
-                  activeTab === "history" ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "text-zinc-600 hover:bg-zinc-100"
-                }`}
-              >
-                <History className="h-4 w-4" />
-                <span>History</span>
-              </button>
-              <button
-                onClick={() => setActiveTab("settings")}
-                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition-all ${
-                  activeTab === "settings" ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "text-zinc-600 hover:bg-zinc-100"
-                }`}
-              >
-                <Settings className="h-4 w-4" />
-                <span>Settings</span>
-              </button>
-            </div>
-          </div>
-          <div className="rounded-xl bg-indigo-50 border border-indigo-100 p-4">
-            <h4 className="text-xs font-bold text-indigo-800">Support Scoped</h4>
-            <p className="text-[10px] text-indigo-600 mt-1 font-medium">Enterprise multi-tenant carpool panel.</p>
-          </div>
-        </aside>
 
         {/* Dashboard Main Workspace */}
         <main className="flex-1 p-6 md:p-12">
-          
+
           {/* TAB: DASHBOARD */}
           {activeTab === "dashboard" && (
             <div className="w-full max-w-5xl rounded-2xl border border-zinc-100 bg-white p-6 shadow-xl shadow-zinc-100/40">
-              
+
               {/* STEP 1: FIND/OFFER RIDE FORM */}
               {bookingStep === "find-ride" && (
                 <div>
                   <div className="mb-6 flex gap-4">
                     <button
                       onClick={() => setBookingType("find")}
-                      className={`flex-1 rounded-xl py-3.5 text-sm font-bold transition-all ${
-                        bookingType === "find" ? "bg-zinc-900 text-white shadow-md shadow-zinc-800/10" : "border border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50"
-                      }`}
+                      className={`flex-1 rounded-xl py-3.5 text-sm font-bold transition-all ${bookingType === "find" ? "bg-zinc-900 text-white shadow-md shadow-zinc-800/10" : "border border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50"
+                        }`}
                     >
                       Find Ride
                     </button>
                     <button
                       onClick={() => setBookingType("offer")}
-                      className={`flex-1 rounded-xl py-3.5 text-sm font-bold transition-all ${
-                        bookingType === "offer" ? "bg-zinc-900 text-white shadow-md shadow-zinc-800/10" : "border border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50"
-                      }`}
+                      className={`flex-1 rounded-xl py-3.5 text-sm font-bold transition-all ${bookingType === "offer" ? "bg-zinc-900 text-white shadow-md shadow-zinc-800/10" : "border border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50"
+                        }`}
                     >
                       Offer Ride
                     </button>
@@ -571,7 +495,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                               type="text"
                               value={startLocation}
                               onChange={(e) => setStartLocation(e.target.value)}
-                              className="w-full rounded-xl border border-zinc-light py-3.5 pl-11 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100/50"
+                              className="w-full rounded-xl border  py-3.5 pl-11 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100/50"
                               placeholder="Enter pick up location"
                             />
                           </div>
@@ -593,7 +517,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                               type="text"
                               value={destLocation}
                               onChange={(e) => setDestLocation(e.target.value)}
-                              className="w-full rounded-xl border border-zinc-light py-3.5 pl-11 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100/50"
+                              className="w-full rounded-xl border py-3.5 pl-11 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100/50"
                               placeholder="Enter drop location"
                             />
                           </div>
@@ -610,7 +534,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                               type="text"
                               value={dateTime}
                               onChange={(e) => setDateTime(e.target.value)}
-                              className="w-full rounded-xl border border-zinc-light py-3.5 pl-11 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100/50 font-medium"
+                              className="w-full rounded-xl border py-3.5 pl-11 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100/50 font-medium"
                             />
                           </div>
                         </div>
@@ -622,7 +546,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                             <select
                               value={seats}
                               onChange={(e) => setSeats(parseInt(e.target.value))}
-                              className="w-full rounded-xl border border-zinc-light bg-white py-3.5 pl-11 pr-4 text-sm outline-none focus:border-indigo-500 font-medium appearance-none"
+                              className="w-full rounded-xl border bg-white py-3.5 pl-11 pr-4 text-sm outline-none focus:border-indigo-500 font-medium appearance-none"
                             >
                               <option value={1}>1 Seat</option>
                               <option value={2}>2 Seats</option>
@@ -643,7 +567,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                               type="number"
                               value={farePerSeat}
                               onChange={(e) => setFarePerSeat(e.target.value)}
-                              className="w-full rounded-xl border border-zinc-light py-3.5 pl-9 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100/50 font-bold"
+                              className="w-full rounded-xl border  py-3.5 pl-9 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100/50 font-bold"
                               placeholder="120"
                             />
                           </div>
@@ -663,14 +587,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                         </div>
                         <button
                           onClick={() => setIsRecurring(!isRecurring)}
-                          className={`relative h-6 w-11 rounded-full transition-all duration-300 ${
-                            isRecurring ? "bg-indigo-600" : "bg-zinc-300"
-                          }`}
+                          className={`relative h-6 w-11 rounded-full transition-all duration-300 ${isRecurring ? "bg-indigo-600" : "bg-zinc-300"
+                            }`}
                         >
                           <div
-                            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-300 ${
-                              isRecurring ? "left-5" : "left-0.5"
-                            }`}
+                            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-300 ${isRecurring ? "left-5" : "left-0.5"
+                              }`}
                           />
                         </button>
                       </div>
@@ -893,7 +815,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                       <line x1="160" y1="120" x2="280" y2="120" stroke="#F3F4F6" strokeWidth="8" />
                       <path d="M 50 250 L 350 250 L 350 50 L 50 50 Z" stroke="#E5E7EB" strokeWidth="10" strokeLinejoin="round" />
                       <path d="M 80 240 Q 140 220 180 120 T 360 60" stroke="#E0E7FF" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
-                      
+
                       {/* Interactive Moving Car */}
                       <g transform={`translate(${80 + 280 * (carProgress / 100) - 12}, ${240 - 180 * (carProgress / 100) + Math.sin((carProgress / 100) * Math.PI * 2) * 20 - 12})`}>
                         <rect x="0" y="0" width="24" height="24" rx="12" fill="white" stroke="#4F46E5" strokeWidth="2.5" />
@@ -949,25 +871,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                   <div className="mx-auto max-w-2xl rounded-2xl border border-zinc-150 bg-white p-6 shadow-md md:flex gap-8">
                     <div className="flex-1 space-y-4">
                       <h3 className="font-bold text-zinc-900 mb-4">Select Payment Option</h3>
-                      <label className={`flex items-center justify-between rounded-xl border p-4 cursor-pointer transition-all ${
-                        payMethod === "cash" ? "border-indigo-600 bg-indigo-50/20" : "border-zinc-200 hover:bg-zinc-50"
-                      }`}>
+                      <label className={`flex items-center justify-between rounded-xl border p-4 cursor-pointer transition-all ${payMethod === "cash" ? "border-indigo-600 bg-indigo-50/20" : "border-zinc-200 hover:bg-zinc-50"
+                        }`}>
                         <div className="flex items-center gap-3">
                           <input type="radio" checked={payMethod === "cash"} onChange={() => setPayMethod("cash")} className="h-4 w-4 text-indigo-600" />
                           <span className="text-sm font-bold text-zinc-800">Cash Payment</span>
                         </div>
                       </label>
-                      <label className={`flex items-center justify-between rounded-xl border p-4 cursor-pointer transition-all ${
-                        payMethod === "card" ? "border-indigo-600 bg-indigo-50/20" : "border-zinc-200 hover:bg-zinc-50"
-                      }`}>
+                      <label className={`flex items-center justify-between rounded-xl border p-4 cursor-pointer transition-all ${payMethod === "card" ? "border-indigo-600 bg-indigo-50/20" : "border-zinc-200 hover:bg-zinc-50"
+                        }`}>
                         <div className="flex items-center gap-3">
                           <input type="radio" checked={payMethod === "card"} onChange={() => setPayMethod("card")} className="h-4 w-4 text-indigo-600" />
                           <span className="text-sm font-bold text-zinc-800">Card Payment</span>
                         </div>
                       </label>
-                      <div className={`rounded-xl border p-4 transition-all ${
-                        payMethod === "upi" ? "border-indigo-600 bg-indigo-50/20" : "border-zinc-200"
-                      }`}>
+                      <div className={`rounded-xl border p-4 transition-all ${payMethod === "upi" ? "border-indigo-600 bg-indigo-50/20" : "border-zinc-200"
+                        }`}>
                         <label className="flex items-center justify-between cursor-pointer">
                           <div className="flex items-center gap-3">
                             <input type="radio" checked={payMethod === "upi"} onChange={() => setPayMethod("upi")} className="h-4 w-4 text-indigo-600" />
@@ -979,13 +898,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                             type="text"
                             value={payUpiId}
                             onChange={(e) => setPayUpiId(e.target.value)}
-                            className="mt-3 w-full rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs outline-none focus:border-indigo-500"
+                            className="mt-3 w-full rounded-lg border  bg-white px-3 py-1.5 text-xs outline-none focus:border-indigo-500"
                           />
                         )}
                       </div>
-                      <label className={`flex items-center justify-between rounded-xl border p-4 cursor-pointer transition-all ${
-                        payMethod === "wallet" ? "border-indigo-600 bg-indigo-50/20" : "border-zinc-200 hover:bg-zinc-50"
-                      }`}>
+                      <label className={`flex items-center justify-between rounded-xl border p-4 cursor-pointer transition-all ${payMethod === "wallet" ? "border-indigo-600 bg-indigo-50/20" : "border-zinc-200 hover:bg-zinc-50"
+                        }`}>
                         <div className="flex items-center gap-3">
                           <input type="radio" checked={payMethod === "wallet"} onChange={() => setPayMethod("wallet")} className="h-4 w-4 text-indigo-600" />
                           <div>
@@ -1038,7 +956,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
           {/* TAB: MY TRIPS (WITH PASSENGER/DRIVER VIEW AND MOCK PASSENGERS) */}
           {activeTab === "trips" && (
             <div className="w-full max-w-4xl rounded-2xl border border-zinc-100 bg-white p-6 shadow-xl shadow-zinc-100/40">
-              
+
               {/* SUBVIEW: LIST */}
               {tripsView === "list" && (
                 <div>
@@ -1052,17 +970,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                     <div className="flex rounded-lg bg-zinc-100 p-1 border border-zinc-200">
                       <button
                         onClick={() => setTripsRole("passenger")}
-                        className={`rounded-md px-3.5 py-1.5 text-xs font-bold transition-all ${
-                          tripsRole === "passenger" ? "bg-white text-indigo-600 shadow-sm" : "text-zinc-500 hover:text-zinc-800"
-                        }`}
+                        className={`rounded-md px-3.5 py-1.5 text-xs font-bold transition-all ${tripsRole === "passenger" ? "bg-white text-indigo-600 shadow-sm" : "text-zinc-500 hover:text-zinc-800"
+                          }`}
                       >
                         Passenger View
                       </button>
                       <button
                         onClick={() => setTripsRole("driver")}
-                        className={`rounded-md px-3.5 py-1.5 text-xs font-bold transition-all ${
-                          tripsRole === "driver" ? "bg-white text-indigo-600 shadow-sm" : "text-zinc-500 hover:text-zinc-800"
-                        }`}
+                        className={`rounded-md px-3.5 py-1.5 text-xs font-bold transition-all ${tripsRole === "driver" ? "bg-white text-indigo-600 shadow-sm" : "text-zinc-500 hover:text-zinc-800"
+                          }`}
                       >
                         Driver View
                       </button>
@@ -1200,7 +1116,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-6">
                       <div className="rounded-xl border border-zinc-150 p-4 text-center bg-zinc-50/50">
                         <span className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Vehicle</span>
-                        <span className="text-sm font-bold text-zinc-800 mt-1 block flex items-center justify-center gap-1.5">
+                        <span className="text-sm font-bold text-zinc-800 mt-1  flex items-center justify-center gap-1.5">
                           <Car className="h-4 w-4 text-indigo-500" />
                           <span>Swift Dzire</span>
                         </span>
@@ -1208,14 +1124,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                       </div>
                       <div className="rounded-xl border border-zinc-150 p-4 text-center bg-zinc-50/50">
                         <span className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Pick UP Point</span>
-                        <span className="text-sm font-bold text-zinc-800 mt-1 block flex items-center justify-center gap-1.5">
+                        <span className="text-sm font-bold text-zinc-800 mt-1  flex items-center justify-center gap-1.5">
                           <MapPin className="h-4 w-4 text-indigo-500" />
                           <span>Iskcon</span>
                         </span>
                       </div>
                       <div className="rounded-xl border border-zinc-150 p-4 text-center bg-zinc-50/50">
                         <span className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Drop Point</span>
-                        <span className="text-sm font-bold text-zinc-800 mt-1 block flex items-center justify-center gap-1.5">
+                        <span className="text-sm font-bold text-zinc-800 mt-1  flex items-center justify-center gap-1.5">
                           <MapPin className="h-4 w-4 text-indigo-500" />
                           <span>Infocity</span>
                         </span>
@@ -1268,7 +1184,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                   </div>
 
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                    <div className="rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-800 p-6 text-white shadow-lg shadow-indigo-100">
+                    <div className="rounded-2xl bg-linear-to-br from-indigo-600 to-indigo-800 p-6 text-white shadow-lg shadow-indigo-100">
                       <span className="text-xs font-bold text-indigo-200 uppercase tracking-widest">Available Balance</span>
                       <div className="text-4xl font-black mt-2">₹ {walletBalance}.00</div>
                     </div>
@@ -1301,9 +1217,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                                 <span className="text-[10px] text-zinc-400 font-bold uppercase">{log.type}</span>
                               </td>
                               <td className="py-3 text-zinc-500">{log.date}</td>
-                              <td className={`py-3 text-right font-black ${
-                                log.type === "Credit" ? "text-emerald-600" : "text-red-500"
-                              }`}>
+                              <td className={`py-3 text-right font-black ${log.type === "Credit" ? "text-emerald-600" : "text-red-500"
+                                }`}>
                                 {log.type === "Credit" ? "+" : "-"} ₹{log.amount}
                               </td>
                             </tr>
@@ -1339,23 +1254,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                           type="text"
                           value={rechargeAmt}
                           onChange={(e) => setRechargeAmt(e.target.value)}
-                          className="w-full rounded-xl border border-zinc-light bg-white px-3.5 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100/50 font-bold"
+                          className="w-full rounded-xl border  bg-white px-3.5 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100/50 font-bold"
                           placeholder="₹ 500"
                         />
                       </div>
 
-                      <label className={`flex items-center justify-between rounded-xl border p-4 cursor-pointer transition-all ${
-                        rechargeMethod === "card" ? "border-indigo-600 bg-indigo-50/20" : "border-zinc-200"
-                      }`}>
+                      <label className={`flex items-center justify-between rounded-xl border p-4 cursor-pointer transition-all ${rechargeMethod === "card" ? "border-indigo-600 bg-indigo-50/20" : "border-zinc-200"
+                        }`}>
                         <div className="flex items-center gap-3">
                           <input type="radio" checked={rechargeMethod === "card"} onChange={() => setRechargeMethod("card")} className="h-4 w-4 text-indigo-600" />
                           <span className="text-sm font-bold text-zinc-800">Card Payment</span>
                         </div>
                       </label>
 
-                      <div className={`rounded-xl border p-4 transition-all ${
-                        rechargeMethod === "upi" ? "border-indigo-600 bg-indigo-50/20" : "border-zinc-200"
-                      }`}>
+                      <div className={`rounded-xl border p-4 transition-all ${rechargeMethod === "upi" ? "border-indigo-600 bg-indigo-50/20" : "border-zinc-200"
+                        }`}>
                         <label className="flex items-center justify-between cursor-pointer">
                           <div className="flex items-center gap-3">
                             <input type="radio" checked={rechargeMethod === "upi"} onChange={() => setRechargeMethod("upi")} className="h-4 w-4 text-indigo-600" />
@@ -1368,7 +1281,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                               type="text"
                               value={rechargeUpiId}
                               onChange={(e) => setRechargeUpiId(e.target.value)}
-                              className="flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs outline-none focus:border-indigo-500"
+                              className="flex-1 rounded-lg border  bg-white px-3 py-1.5 text-xs outline-none focus:border-indigo-500"
                               placeholder="username@abcd"
                             />
                           </div>
@@ -1430,7 +1343,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
 
               {/* Graphic Trends Section (Pure SVG responsive charts!) */}
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 mb-8">
-                
+
                 {/* SVG Line Chart for Fuel Efficiency */}
                 <div className="rounded-xl border border-zinc-150 bg-white p-5 shadow-sm">
                   <h3 className="text-sm font-bold text-zinc-800 mb-4 flex items-center gap-1.5">
@@ -1443,7 +1356,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                       <line x1="20" y1="120" x2="290" y2="120" stroke="#F3F4F6" strokeWidth="1" />
                       <line x1="20" y1="80" x2="290" y2="80" stroke="#F3F4F6" strokeWidth="1" />
                       <line x1="20" y1="40" x2="290" y2="40" stroke="#F3F4F6" strokeWidth="1" />
-                      
+
                       {/* Axis */}
                       <line x1="20" y1="130" x2="290" y2="130" stroke="#E5E7EB" strokeWidth="1.5" />
                       <line x1="20" y1="20" x2="20" y2="130" stroke="#E5E7EB" strokeWidth="1.5" />
@@ -1575,7 +1488,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
               </div>
 
               <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-                
+
                 {/* Left Column: Vehicle Management */}
                 <div className="space-y-6">
                   <div>
@@ -1619,7 +1532,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                   {/* Add Vehicle Form */}
                   <form onSubmit={handleRegisterVehicle} className="rounded-2xl border border-zinc-100 bg-zinc-50/30 p-5 space-y-4 shadow-inner">
                     <span className="block text-xs font-bold text-zinc-700 uppercase tracking-wide">Register New Vehicle</span>
-                    
+
                     {vehicleError && (
                       <div className="text-xs font-semibold text-red-500 bg-red-50 p-2 rounded-lg border border-red-100">
                         {vehicleError}
@@ -1634,7 +1547,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                           placeholder="Tesla Model 3 / Swift"
                           value={newVehModel}
                           onChange={(e) => setNewVehModel(e.target.value)}
-                          className="w-full rounded-xl border border-zinc-light bg-white px-3 py-2 text-xs outline-none focus:border-indigo-500"
+                          className="w-full rounded-xl border  bg-white px-3 py-2 text-xs outline-none focus:border-indigo-500"
                         />
                       </div>
                       <div className="space-y-1">
@@ -1644,7 +1557,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                           placeholder="GJ01AB1234"
                           value={newVehPlate}
                           onChange={(e) => setNewVehPlate(e.target.value)}
-                          className="w-full rounded-xl border border-zinc-light bg-white px-3 py-2 text-xs outline-none focus:border-indigo-500"
+                          className="w-full rounded-xl border  bg-white px-3 py-2 text-xs outline-none focus:border-indigo-500"
                         />
                       </div>
                     </div>
@@ -1654,7 +1567,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                       <select
                         value={newVehCapacity}
                         onChange={(e) => setNewVehCapacity(parseInt(e.target.value))}
-                        className="w-full rounded-xl border border-zinc-light bg-white px-3 py-2 text-xs outline-none focus:border-indigo-500 appearance-none"
+                        className="w-full rounded-xl border  bg-white px-3 py-2 text-xs outline-none focus:border-indigo-500 appearance-none"
                       >
                         <option value={2}>2 Passengers</option>
                         <option value={3}>3 Passengers</option>
@@ -1724,7 +1637,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                           placeholder="Home, Office..."
                           value={newPlaceLabel}
                           onChange={(e) => setNewPlaceLabel(e.target.value)}
-                          className="w-full rounded-xl border border-zinc-light bg-white px-3 py-2 text-xs outline-none focus:border-indigo-500"
+                          className="w-full rounded-xl border  bg-white px-3 py-2 text-xs outline-none focus:border-indigo-500"
                         />
                       </div>
                       <div className="space-y-1">
@@ -1734,7 +1647,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                           placeholder="Iskcon, Infocity..."
                           value={newPlaceAddress}
                           onChange={(e) => setNewPlaceAddress(e.target.value)}
-                          className="w-full rounded-xl border border-zinc-light bg-white px-3 py-2 text-xs outline-none focus:border-indigo-500"
+                          className="w-full rounded-xl border  bg-white px-3 py-2 text-xs outline-none focus:border-indigo-500"
                         />
                       </div>
                     </div>
@@ -1776,9 +1689,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
             <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-zinc-50/50">
               {chatMessages.map((msg, index) => (
                 <div key={index} className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}>
-                  <div className={`max-w-[75%] rounded-xl px-4 py-2.5 text-sm ${
-                    msg.sender === "user" ? "bg-indigo-600 text-white" : "bg-white border border-zinc-150 text-zinc-800"
-                  }`}>
+                  <div className={`max-w-[75%] rounded-xl px-4 py-2.5 text-sm ${msg.sender === "user" ? "bg-indigo-600 text-white" : "bg-white border border-zinc-150 text-zinc-800"
+                    }`}>
                     {msg.text}
                   </div>
                   <span className="text-[9px] text-zinc-400 mt-1 mr-1 ml-1">{msg.time}</span>
@@ -1791,7 +1703,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Type your message..."
-                className="flex-1 rounded-xl border border-zinc-light px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                className="flex-1 rounded-xl border px-3 py-2 text-sm outline-none focus:border-indigo-500"
               />
               <button type="submit" className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700">
                 Send
