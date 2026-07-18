@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { ThemeToggle } from "./ThemeToggle";
 import {
   Search,
   MapPin,
@@ -421,6 +422,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
 
         {/* Profile and Logout Actions */}
         <div className="flex items-center gap-4">
+          <ThemeToggle />
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-zinc-700">Dero Addict</span>
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-50 border border-indigo-100">

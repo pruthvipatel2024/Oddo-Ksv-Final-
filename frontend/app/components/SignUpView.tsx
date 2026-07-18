@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import { ThemeToggle } from "./ThemeToggle";
 import { User, Phone, Mail, Lock, Eye, EyeOff, Camera, ArrowLeft, ArrowRight } from "lucide-react";
 
 interface SignUpViewProps {
@@ -99,12 +100,15 @@ export const SignUpView: React.FC<SignUpViewProps> = ({
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-            Welcome
-          </span>
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 border border-zinc-200">
-            <User className="h-4 w-4 text-zinc-600" />
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+              Welcome
+            </span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 border border-zinc-200">
+              <User className="h-4 w-4 text-zinc-600" />
+            </div>
           </div>
         </div>
       </header>
