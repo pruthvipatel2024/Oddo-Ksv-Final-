@@ -1,5 +1,5 @@
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
-import { User, Prisma } from '@prisma/client';
+import { User, Prisma, UserStatus } from '@prisma/client';
 import { UsersRepository } from './users.repository';
 import { PrismaService } from '../database/prisma.service';
 
@@ -46,6 +46,22 @@ export class UsersService {
    */
   async update(id: string, data: Prisma.UserUpdateInput, organizationId?: string): Promise<User> {
     return this.usersRepository.update(id, data, organizationId);
+  }
+
+  /**
+   * Find all users under optional organization scoping.
+   */
+  async findAll(organizationId?: string): Promise<User[]> {
+    // Return all users (exclude super admin from company lists if scoped)
+    const whereClause = organizationId ? { role: { not: 'SUPER_ADMIN' } } : {};
+    return this.usersRepository.findAll(whereClause, organizationId);
+  }
+
+  /**
+   * Update user status.
+   */
+  async updateStatus(id: string, status: UserStatus, organizationId?: string): Promise<User> {
+    return this.usersRepository.update(id, { status }, organizationId);
   }
 
   /**

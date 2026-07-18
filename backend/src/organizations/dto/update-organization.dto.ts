@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsOptional, IsString, IsPositive } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class UpdateOrganizationDto {
   @ApiProperty({ example: 'Tech Corp Inc.', description: 'The name of the organization', required: false })
@@ -7,15 +7,38 @@ export class UpdateOrganizationDto {
   @IsOptional()
   name?: string;
 
-  @ApiProperty({ example: 105.5, description: 'Updated fuel cost per litre', required: false })
-  @IsNumber()
-  @IsPositive()
+  @ApiProperty({ example: 'https://logo.url/logo.png', description: 'URL of the organization logo', required: false })
+  @IsString()
   @IsOptional()
-  fuelCostPerLitre?: number;
+  logo?: string;
 
-  @ApiProperty({ example: 16.0, description: 'Updated cost per kilometer rate', required: false })
-  @IsNumber()
-  @IsPositive()
+  @ApiProperty({ example: 'techcorp.com', description: 'Email domain associated with the organization', required: false })
+  @IsString()
   @IsOptional()
-  costPerKm?: number;
+  emailDomain?: string;
+
+  @ApiProperty({ example: '123 Tech Park', description: 'Street address of the organization headquarters', required: false })
+  @IsString()
+  @IsOptional()
+  address?: string;
+
+  @ApiProperty({ example: 'Ahmedabad', description: 'City where the organization is located', required: false })
+  @IsString()
+  @IsOptional()
+  city?: string;
+
+  @ApiProperty({ example: 'Gujarat', description: 'State/Province where the organization is located', required: false })
+  @IsString()
+  @IsOptional()
+  state?: string;
+
+  @ApiProperty({ example: 'India', description: 'Country where the organization is located', required: false })
+  @IsString()
+  @IsOptional()
+  country?: string;
+
+  @ApiProperty({ example: 'ACTIVE', description: 'Status of the organization', required: false })
+  @IsString()
+  @IsOptional()
+  status?: string;
 }

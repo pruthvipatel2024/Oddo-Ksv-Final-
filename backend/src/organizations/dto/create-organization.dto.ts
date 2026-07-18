@@ -12,27 +12,32 @@ export class CreateOrganizationDto {
   @IsNotEmpty()
   code: string;
 
-  @ApiPropertyOptional({ example: 'tech.corp', description: 'Email domain for employee auto-verification' })
+  @ApiPropertyOptional({ example: 'https://logo.url/logo.png', description: 'URL of the organization logo' })
+  @IsString()
+  @IsOptional()
+  logo?: string;
+
+  @ApiPropertyOptional({ example: 'techcorp.com', description: 'Email domain associated with the organization' })
   @IsString()
   @IsOptional()
   emailDomain?: string;
 
-  @ApiProperty({ example: '123 Main Street', description: 'Office address' })
+  @ApiProperty({ example: '123 Tech Park', description: 'Street address of the organization headquarters' })
   @IsString()
   @IsNotEmpty()
   address: string;
 
-  @ApiProperty({ example: 'Bengaluru', description: 'City' })
+  @ApiProperty({ example: 'Ahmedabad', description: 'City where the organization is located' })
   @IsString()
   @IsNotEmpty()
   city: string;
 
-  @ApiProperty({ example: 'Karnataka', description: 'State / Province' })
+  @ApiProperty({ example: 'Gujarat', description: 'State/Province where the organization is located' })
   @IsString()
   @IsNotEmpty()
   state: string;
 
-  @ApiProperty({ example: 'India', description: 'Country' })
+  @ApiProperty({ example: 'India', description: 'Country where the organization is located' })
   @IsString()
   @IsNotEmpty()
   country: string;

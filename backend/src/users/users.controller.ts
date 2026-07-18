@@ -9,9 +9,11 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdateUserStatusDto } from './dto/update-status.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { UserRole } from '@prisma/client';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 @ApiTags('Users & Profile')
 @Controller({
@@ -127,6 +129,40 @@ export class UsersController {
   async findOne(@Param('id') id: string, @CurrentUser() currentUser: JwtPayload) {
     // SUPER_ADMIN can see anyone; others can look up any user (marketplace is global)
     const user = await this.usersService.findById(id);
+    const { passwordHash, refreshTokenHash, ...cleanUser } = user as any;
+    return { success: true, data: cleanUser };
+  }
+
+  @Get()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'List all organization employees', description: 'Restricted to Admins. Scopes result to requester\'s org.' })
+  @ApiResponse({ status: 200, description: 'Return array of employees.' })
+  async findAll(@CurrentUser() currentUser: JwtPayload) {
+    const orgId = currentUser.role === UserRole.SUPER_ADMIN ? undefined : currentUser.organizationId || undefined;
+    const users = await this.usersService.findAll(orgId);
+    
+    // Strip passwords and tokens
+    const cleanUsers = users.map((user) => {
+      const { passwordHash, refreshTokenHash, ...clean } = user as any;
+      return clean;
+    });
+
+    return { success: true, data: cleanUsers };
+  }
+
+  @Patch(':id/status')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Suspend or activate an employee profile', description: 'Restricted to Admins.' })
+  @ApiResponse({ status: 200, description: 'User status updated successfully.' })
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserStatusDto,
+    @CurrentUser() admin: JwtPayload,
+  ) {
+    const orgId = admin.role === UserRole.SUPER_ADMIN ? undefined : admin.organizationId || undefined;
+    const user = await this.usersService.updateStatus(id, dto.status, orgId);
     const { passwordHash, refreshTokenHash, ...cleanUser } = user as any;
     return { success: true, data: cleanUser };
   }

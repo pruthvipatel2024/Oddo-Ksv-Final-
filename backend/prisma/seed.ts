@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { PrismaClient, UserRole, UserType, UserStatus } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
@@ -18,9 +19,9 @@ async function main() {
     create: {
       name: 'Company A (Tech Corp)',
       code: 'CORPA',
-      address: '1st Floor, Tech Park, Whitefield',
-      city: 'Bengaluru',
-      state: 'Karnataka',
+      address: '123 Tech Park',
+      city: 'Ahmedabad',
+      state: 'Gujarat',
       country: 'India',
     },
   });
@@ -32,9 +33,9 @@ async function main() {
     create: {
       name: 'Company B (Finance Solutions)',
       code: 'CORPB',
-      address: '3rd Floor, Finance Tower, BKC',
-      city: 'Mumbai',
-      state: 'Maharashtra',
+      address: '456 Financial Hub',
+      city: 'Ahmedabad',
+      state: 'Gujarat',
       country: 'India',
     },
   });
