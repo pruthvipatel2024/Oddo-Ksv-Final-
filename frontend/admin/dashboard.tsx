@@ -8,15 +8,50 @@ import VehiclesTab from './vehicles-tab';
 import UsersTab from './users-tab';
 import SettingsTab from './settings-tab';
 import AnalysisGraph from './analysis-graph';
+import { vehiclesApi } from '@/src/api/vehicles';
 
-export default function Dashboard() {
+export default function Dashboard({ onLogout }: { onLogout?: () => void }) {
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
-  const [vehicles, setVehicles] = useState<Vehicle[]>(initialVehicles);
+  const [vehicles, setVehicles] = useState<any[]>(initialVehicles);
   const [settings, setSettings] = useState<Settings>(initialSettings);
   const [rentals, setRentals] = useState<UserRental[]>(initialUserRentals);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'employees' | 'vehicles' | 'users' | 'settings'>('dashboard');
   const [showNavDropdown, setShowNavDropdown] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+
+  const loadAdminData = async () => {
+    try {
+      const res = (await vehiclesApi.findAll()) as any;
+      if (res.success && res.data) {
+        const mapped = res.data.map((v: any) => ({
+          id: v.id,
+          registrationNumber: v.registrationNumber,
+          model: v.model,
+          seatingCapacity: v.seatingCapacity,
+          driver: v.owner ? `${v.owner.firstName} ${v.owner.lastName}` : "Employee",
+          status: v.verificationStatus === 'VERIFIED' ? 'Active' : v.verificationStatus,
+          verificationStatus: v.verificationStatus
+        }));
+        setVehicles(mapped);
+      }
+    } catch (e) {
+      console.error("Failed to load admin vehicles:", e);
+    }
+  };
+
+  useEffect(() => {
+    loadAdminData();
+  }, [activeTab]);
+
+  const handleVerifyVehicle = async (id: string, status: 'VERIFIED' | 'REJECTED') => {
+    try {
+      await (vehiclesApi.verify(id, status) as any);
+      showToast(`Vehicle status updated to ${status}.`, 'success');
+      await loadAdminData();
+    } catch (err: any) {
+      showToast(err?.message || "Failed to update vehicle verification status.", 'info');
+    }
+  };
   
   useEffect(() => {
     const root = window.document.documentElement;
@@ -52,6 +87,7 @@ export default function Dashboard() {
     setVehicles((prev) => [...prev, newVeh]);
     showToast(`Vehicle "${newVeh.registrationNumber}" registered successfully.`);
   };
+
 
   const handleAddRental = (newRental: UserRental) => {
     setRentals((prev) => [...prev, newRental]);
@@ -172,6 +208,16 @@ export default function Dashboard() {
               <div className="w-8 h-8 rounded-full bg-sky-600 border border-zinc-900 shadow-md flex items-center justify-center text-xs font-bold text-white uppercase select-none">
                 OP
               </div>
+              <button
+                onClick={onLogout}
+                className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer shadow-sm hover:scale-105 active:scale-95 ${
+                  theme === 'dark'
+                    ? 'bg-red-950/40 border-red-900/50 text-red-400 hover:bg-red-900/30 hover:text-red-300'
+                    : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100 hover:text-red-700'
+                }`}
+              >
+                Logout
+              </button>
             </div>
           </div>
         </div>
@@ -290,7 +336,7 @@ export default function Dashboard() {
         {/* Tab Render Area */}
         <div className="py-2">
           {activeTab === 'dashboard' && (
-            <AnalysisGraph theme={theme} />
+            <AnalysisGraph />
           )}
           {activeTab === 'employees' && (
             <EmployeesTab 
@@ -303,7 +349,7 @@ export default function Dashboard() {
             />
           )}
           {activeTab === 'vehicles' && (
-            <VehiclesTab vehicles={vehicles} employees={employees} onAddVehicle={handleAddVehicle} theme={theme} />
+            <VehiclesTab vehicles={vehicles} employees={employees} onAddVehicle={handleAddVehicle} onVerifyVehicle={handleVerifyVehicle} theme={theme} />
           )}
           {activeTab === 'users' && (
             <UsersTab rentals={rentals} employees={employees} vehicles={vehicles} onAddRental={handleAddRental} theme={theme} />

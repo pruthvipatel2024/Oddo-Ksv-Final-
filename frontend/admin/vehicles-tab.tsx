@@ -5,13 +5,14 @@ import { Vehicle, Employee } from './types';
 import { validateVehicleReg, validateRequired, validatePositiveInteger } from './validation';
 
 interface VehiclesTabProps {
-  vehicles: Vehicle[];
+  vehicles: any[];
   employees: Employee[];
   onAddVehicle: (vehicle: Vehicle) => void;
+  onVerifyVehicle?: (id: string, status: 'VERIFIED' | 'REJECTED') => void;
   theme: 'light' | 'dark';
 }
 
-export default function VehiclesTab({ vehicles, employees, onAddVehicle, theme }: VehiclesTabProps) {
+export default function VehiclesTab({ vehicles, employees, onAddVehicle, onVerifyVehicle, theme }: VehiclesTabProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     registrationNumber: '',
@@ -142,6 +143,7 @@ export default function VehiclesTab({ vehicles, employees, onAddVehicle, theme }
               <th className="px-6 py-4">Seating Capacity</th>
               <th className="px-6 py-4">Driver</th>
               <th className="px-6 py-4">Status</th>
+              <th className="px-6 py-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className={`divide-y text-sm transition-colors ${
@@ -154,7 +156,7 @@ export default function VehiclesTab({ vehicles, employees, onAddVehicle, theme }
                 <td className={`whitespace-nowrap px-6 py-4 font-mono font-bold tracking-wider ${
                   theme === 'dark' ? 'text-zinc-100' : 'text-slate-850'
                 }`}>
-                  {veh.registrationNumber.slice(0, 4)} {veh.registrationNumber.slice(4, 6)} {veh.registrationNumber.slice(6)}
+                  {veh.registrationNumber}
                 </td>
                 <td className="whitespace-nowrap px-6 py-4">{veh.model}</td>
                 <td className={`whitespace-nowrap px-6 py-4 transition-colors ${theme === 'dark' ? 'text-zinc-400' : 'text-slate-500'}`}>
@@ -164,24 +166,45 @@ export default function VehiclesTab({ vehicles, employees, onAddVehicle, theme }
                 <td className="whitespace-nowrap px-6 py-4">
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
-                      veh.status === 'Active'
+                      veh.status === 'Active' || veh.verificationStatus === 'VERIFIED'
                         ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                        : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                        : veh.verificationStatus === 'REJECTED'
+                        ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                        : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                     }`}
                   >
                     <span
                       className={`w-1.5 h-1.5 mr-1.5 rounded-full ${
-                        veh.status === 'Active' ? 'bg-emerald-400' : 'bg-rose-400'
+                        veh.status === 'Active' || veh.verificationStatus === 'VERIFIED' ? 'bg-emerald-400' :
+                        veh.verificationStatus === 'REJECTED' ? 'bg-rose-400' : 'bg-amber-400'
                       }`}
                     />
-                    {veh.status}
+                    {veh.verificationStatus || veh.status}
                   </span>
+                </td>
+                <td className="whitespace-nowrap px-6 py-4 text-right">
+                  {veh.verificationStatus === 'PENDING' && (
+                    <div className="flex justify-end gap-1.5">
+                      <button
+                        onClick={() => onVerifyVehicle && onVerifyVehicle(veh.id, 'VERIFIED')}
+                        className="px-2.5 py-1 text-[10px] font-bold bg-sky-600 hover:bg-sky-500 text-white rounded-md transition-colors cursor-pointer"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => onVerifyVehicle && onVerifyVehicle(veh.id, 'REJECTED')}
+                        className="px-2.5 py-1 text-[10px] font-bold bg-zinc-700 hover:bg-zinc-650 text-zinc-200 rounded-md transition-colors cursor-pointer"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
             {vehicles.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-zinc-500">
+                <td colSpan={6} className="px-6 py-12 text-center text-zinc-500">
                   No vehicles registered yet. Click "+ Add Vehicle" below.
                 </td>
               </tr>

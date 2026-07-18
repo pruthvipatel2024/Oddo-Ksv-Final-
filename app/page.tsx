@@ -1,6 +1,5 @@
-import Dashboard from "@/frontend/admin/dashboard";
+import Home from "@/frontend/app/page";
 
-export default function Home() {
-  return <Dashboard />;
-}
+export default Home;
+
 

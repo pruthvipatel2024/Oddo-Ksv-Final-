@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { Mail, Lock, Eye, EyeOff, ArrowLeft, ArrowRight, User } from "lucide-react";
+import { useSession } from "@/src/context/SessionContext";
+
 
 interface LoginViewProps {
   onSignUpClick: () => void;
@@ -21,30 +23,32 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { login } = useSession();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     if (!emailOrMobile.trim()) {
-      setError("Please enter your email or mobile number.");
+      setError("Please enter your email.");
       return;
     }
     if (!password) {
       setError("Please enter your password.");
       return;
     }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
 
     setLoading(true);
-    // Simulate API request
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await login({ email: emailOrMobile.trim(), password });
       onLoginSuccess();
-    }, 1200);
+    } catch (err: any) {
+      setError(err?.message || "Invalid credentials. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
+
 
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-[#fdfdfd] text-zinc-800 antialiased">

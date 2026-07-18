@@ -2,7 +2,8 @@
 
 import React, { useState, useRef } from "react";
 import { ThemeToggle } from "./ThemeToggle";
-import { User, Phone, Mail, Lock, Eye, EyeOff, Camera, ArrowLeft, ArrowRight } from "lucide-react";
+import { User, Phone, Mail, Lock, Eye, EyeOff, Camera, ArrowLeft, ArrowRight, Briefcase, Hash } from "lucide-react";
+import { useSession } from "@/src/context/SessionContext";
 
 interface SignUpViewProps {
   onLoginClick: () => void;
@@ -18,6 +19,8 @@ export const SignUpView: React.FC<SignUpViewProps> = ({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [emailOrMobile, setEmailOrMobile] = useState("");
+  const [organizationCode, setOrganizationCode] = useState("");
+  const [employeeCode, setEmployeeCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -27,6 +30,8 @@ export const SignUpView: React.FC<SignUpViewProps> = ({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const { register } = useSession();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -50,7 +55,7 @@ export const SignUpView: React.FC<SignUpViewProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -63,15 +68,19 @@ export const SignUpView: React.FC<SignUpViewProps> = ({
       return;
     }
     if (!emailOrMobile.trim()) {
-      setError("Please enter your email or mobile.");
+      setError("Please enter your email.");
+      return;
+    }
+    if (!organizationCode.trim()) {
+      setError("Please enter your Organization Invite Code.");
       return;
     }
     if (!password) {
       setError("Please enter a password.");
       return;
     }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters on the server.");
       return;
     }
     if (password !== confirmPassword) {
@@ -79,13 +88,30 @@ export const SignUpView: React.FC<SignUpViewProps> = ({
       return;
     }
 
+    const nameParts = name.trim().split(" ");
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "Doe";
+
     setLoading(true);
-    // Simulate API registration
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await register({
+        email: emailOrMobile.trim(),
+        password,
+        firstName,
+        lastName,
+        phone: phone.trim(),
+        organizationCode: organizationCode.trim().toUpperCase(),
+        employeeCode: employeeCode.trim() || undefined,
+        userType: "INTERNAL",
+      });
       onSignUpSuccess();
-    }, 1200);
+    } catch (err: any) {
+      setError(err?.message || "Registration failed. Ensure your invite code is correct.");
+    } finally {
+      setLoading(false);
+    }
   };
+
 
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-[#fdfdfd] text-zinc-800 antialiased">
@@ -238,6 +264,44 @@ export const SignUpView: React.FC<SignUpViewProps> = ({
                   />
                 </div>
               </div>
+
+              {/* Organization Invite Code & Employee Code Row */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {/* Organization Invite Code */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
+                    Org Invite Code
+                  </label>
+                  <div className="relative flex items-center">
+                    <Briefcase className="absolute left-3.5 h-4 w-4 text-zinc-400" />
+                    <input
+                      type="text"
+                      placeholder="e.g. CORPA"
+                      value={organizationCode}
+                      onChange={(e) => setOrganizationCode(e.target.value)}
+                      className="w-full rounded-xl border bg-white py-3 pl-11 pr-4 text-sm outline-none transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100/50"
+                    />
+                  </div>
+                </div>
+
+                {/* Employee ID (Optional) */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
+                    Employee ID (Optional)
+                  </label>
+                  <div className="relative flex items-center">
+                    <Hash className="absolute left-3.5 h-4 w-4 text-zinc-400" />
+                    <input
+                      type="text"
+                      placeholder="e.g. EMP-001"
+                      value={employeeCode}
+                      onChange={(e) => setEmployeeCode(e.target.value)}
+                      className="w-full rounded-xl border bg-white py-3 pl-11 pr-4 text-sm outline-none transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100/50"
+                    />
+                  </div>
+                </div>
+              </div>
+
 
               {/* Password & Confirm Password Row */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

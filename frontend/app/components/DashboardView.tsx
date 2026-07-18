@@ -1,7 +1,20 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ThemeToggle } from "./ThemeToggle";
+import { useSession } from "@/src/context/SessionContext";
+import { vehiclesApi } from "@/src/api/vehicles";
+import { ridesApi } from "@/src/api/rides";
+import { bookingsApi } from "@/src/api/bookings";
+import { paymentsApi } from "@/src/api/payments";
+import { walletApi } from "@/src/api/wallet";
+import { tripsApi } from "@/src/api/trips";
+import { ratingsApi } from "@/src/api/ratings";
+import { withdrawalsApi } from "@/src/api/withdrawals";
+import { chatApi } from "@/src/api/chat";
+import { usersApi } from "@/src/api/users";
+import { io } from "socket.io-client";
+
 import {
   Search,
   MapPin,
@@ -79,14 +92,147 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
   const [isRecurring, setIsRecurring] = useState(true);
   const [farePerSeat, setFarePerSeat] = useState("120");
 
-  // Vehicle Management State (starts empty to demonstrate warning check before offering a ride!)
-  const [vehiclesList, setVehiclesList] = useState<Vehicle[]>([]);
+  // Vehicle Management State
   const [newVehModel, setNewVehModel] = useState("");
   const [newVehPlate, setNewVehPlate] = useState("");
   const [newVehCapacity, setNewVehCapacity] = useState(4);
   const [vehicleError, setVehicleError] = useState("");
 
-  const handleRegisterVehicle = (e: React.FormEvent) => {
+  // Saved Places State
+  const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([
+    { id: "1", label: "Home", address: "Iskcon" },
+    { id: "2", label: "Office", address: "Infocity" },
+    { id: "3", label: "Gym", address: "Prahladnagar" }
+  ]);
+  const [newPlaceLabel, setNewPlaceLabel] = useState("");
+  const [newPlaceAddress, setNewPlaceAddress] = useState("");
+
+  // Session hook
+  const {
+    user,
+    wallet,
+    vehicles,
+    notifications,
+    refreshWallet,
+    refreshVehicles,
+    addNotification,
+    markNotificationRead,
+    markAllNotificationsRead
+  } = useSession();
+
+  // Dynamic API state lists
+  const [availableRidesList, setAvailableRidesList] = useState<any[]>([]);
+  const [selectedRide, setSelectedRide] = useState<any>(null);
+  const [selectedDriver, setSelectedDriver] = useState<any>(null);
+  const [selectedTrip, setSelectedTrip] = useState<any>(null);
+  const [routeData, setRouteData] = useState<any>(null);
+  const [passengerTrips, setPassengerTrips] = useState<any[]>([]);
+  const [driverTrips, setDriverTrips] = useState<any[]>([]);
+  
+  // Loading indicators
+  const [loadingRoute, setLoadingRoute] = useState(false);
+  const [loadingSearch, setLoadingSearch] = useState(false);
+  const [loadingBooking, setLoadingBooking] = useState(false);
+
+  // Live tracking & chat coordination
+  const [carProgress, setCarProgress] = useState(0);
+  const [etaMinutes, setEtaMinutes] = useState(5);
+  const [rideCompleted, setRideCompleted] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [showCall, setShowCall] = useState(false);
+  const [callDuration, setCallDuration] = useState(0);
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [socket, setSocket] = useState<{ chat: any; tracking: any } | null>(null);
+  const [conversationIdState, setConversationIdState] = useState("");
+
+  // Wallet top-up / Recharge
+  const [rechargeAmt, setRechargeAmt] = useState("500");
+  const [rechargeMethod, setRechargeMethod] = useState<"card" | "upi">("upi");
+  const [rechargeUpiId, setRechargeUpiId] = useState("username@paytm");
+
+  // Payment Method Selection
+  const [payMethod, setPayMethod] = useState<"cash" | "card" | "upi" | "wallet">("wallet");
+  const [payUpiId, setPayUpiId] = useState("deroaddict@okaxis");
+
+  // Post-trip ratings
+  const [passengerRating, setPassengerRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+
+  // Locations coordinate lookup mapper
+  const getLocationCoords = (label: string) => {
+    const normalized = label.trim().toLowerCase();
+    if (normalized.includes("iskcon")) return { lat: 23.0225, lng: 72.5068 };
+    if (normalized.includes("infocity")) return { lat: 23.1883, lng: 72.6289 };
+    if (normalized.includes("prahladnagar")) return { lat: 23.0120, lng: 72.5110 };
+    return { lat: 23.0225, lng: 72.5068 };
+  };
+
+  const parseDateTimeInput = (val: string): string => {
+    try {
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) return d.toISOString();
+    } catch (e) {}
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString();
+  };
+
+  // Load backend statistics and lists
+  const loadDashboardData = async () => {
+    try {
+      const res = (await usersApi.getEmployeeDashboard()) as any;
+      if (res.success && res.data) {
+        const { upcomingBookings, offeredRides } = res.data;
+
+        // Map passenger bookings
+        const mappedPassengerTrips = (upcomingBookings || []).map((b: any) => ({
+          id: b.id,
+          tripId: b.tripId || (b.payments && b.payments[0]?.tripId) || null,
+          driverName: `${b.ride.driver.firstName} ${b.ride.driver.lastName}`,
+          route: `${b.ride.pickupAddress} to ${b.ride.destinationAddress}`,
+          time: `${b.ride.time} on ${new Date(b.ride.date).toLocaleDateString()}`,
+          vehicle: b.ride.vehicle.model,
+          plate: b.ride.vehicle.registrationNumber,
+          start: b.ride.pickupAddress,
+          dest: b.ride.destinationAddress,
+          fare: `₹${b.fare} / Seat ${b.seatsBooked}`,
+          status: b.status,
+          raw: b
+        }));
+        setPassengerTrips(mappedPassengerTrips);
+
+        // Map driver offered rides
+        const mappedDriverTrips = (offeredRides || []).map((r: any) => ({
+          id: r.id,
+          tripId: r.trip?.id || null,
+          route: `${r.pickupAddress} to ${r.destinationAddress}`,
+          time: `${r.time} on ${new Date(r.date).toLocaleDateString()}`,
+          vehicle: r.vehicle.model,
+          plate: r.vehicle.registrationNumber,
+          start: r.pickupAddress,
+          dest: r.destinationAddress,
+          fare: `₹${r.farePerSeat} / Seat 1`,
+          status: r.status,
+          passengerName: r.bookings.filter((b: any) => b.status === 'CONFIRMED').map((b: any) => b.passenger.firstName).join(", ") || "No confirmed passengers yet",
+          bookings: r.bookings || [],
+          raw: r
+        }));
+        setDriverTrips(mappedDriverTrips);
+      }
+    } catch (e) {
+      console.error("Failed to load dashboard data:", e);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboardData();
+    refreshWallet();
+    refreshVehicles();
+  }, [activeTab]);
+
+  // Handle vehicle registration
+  const handleRegisterVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
     setVehicleError("");
     if (!newVehModel.trim()) {
@@ -98,32 +244,35 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
       return;
     }
 
-    const newVeh: Vehicle = {
-      id: Date.now().toString(),
-      model: newVehModel.trim(),
-      plate: newVehPlate.trim().toUpperCase(),
-      capacity: newVehCapacity
-    };
-
-    setVehiclesList((prev) => [...prev, newVeh]);
-    setNewVehModel("");
-    setNewVehPlate("");
-    setNewVehCapacity(4);
+    try {
+      await vehiclesApi.create({
+        manufacturer: "Toyota",
+        model: newVehModel.trim(),
+        color: "Silver",
+        registrationNumber: newVehPlate.trim().toUpperCase(),
+        seatingCapacity: newVehCapacity
+      });
+      await refreshVehicles();
+      addNotification("Vehicle Registered", `Vehicle ${newVehPlate} registered successfully (Awaiting verification).`, "INFO");
+      setNewVehModel("");
+      setNewVehPlate("");
+      setNewVehCapacity(4);
+    } catch (err: any) {
+      setVehicleError(err?.message || "Failed to register vehicle.");
+    }
   };
 
-  const handleDeleteVehicle = (id: string) => {
-    setVehiclesList((prev) => prev.filter((v) => v.id !== id));
+  const handleDeleteVehicle = async (id: string) => {
+    try {
+      await vehiclesApi.delete(id);
+      await refreshVehicles();
+      addNotification("Vehicle Deleted", "Vehicle record removed successfully.", "INFO");
+    } catch (err: any) {
+      alert(err?.message || "Failed to delete vehicle.");
+    }
   };
 
-  // Saved Places State
-  const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([
-    { id: "1", label: "Home", address: "Iskcon" },
-    { id: "2", label: "Office", address: "Infocity" },
-    { id: "3", label: "Gym", address: "Prahladnagar" }
-  ]);
-  const [newPlaceLabel, setNewPlaceLabel] = useState("");
-  const [newPlaceAddress, setNewPlaceAddress] = useState("");
-
+  // Saved places handlers
   const handleAddSavedPlace = (e: React.FormEvent) => {
     e.preventDefault();
     if (newPlaceLabel.trim() && newPlaceAddress.trim()) {
@@ -144,108 +293,94 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
     setSavedPlaces((prev) => prev.filter((p) => p.id !== id));
   };
 
-  // Available drivers list
-  const drivers = [
-    {
-      id: "raj",
-      name: "Raj Patel",
-      time: "07:00 PM 18/July/26",
-      route: "Iskcon to Infocity",
-      price: 120,
-      seats: "2 Seats Available",
-      rating: 4.8,
-      car: "Swift Dzire",
-      plate: "GJ01AB1234"
-    },
-    {
-      id: "krishna",
-      name: "Krishna Singh",
-      time: "08:00 PM 18/July/26",
-      route: "Iskcon to Infocity",
-      price: 120,
-      seats: "2 Seats Available",
-      rating: 4.9,
-      car: "Hyundai i20",
-      plate: "GJ01XY5678"
-    }
-  ];
-
-  const [selectedDriver, setSelectedDriver] = useState(drivers[0]);
-
-  // Live tracking animation state
-  const [carProgress, setCarProgress] = useState(0);
-  const [etaMinutes, setEtaMinutes] = useState(5);
-  const [rideCompleted, setRideCompleted] = useState(false);
-
-  // Simulation effect for tracking the car
+  // WebSocket coordination for Chat & Tracking
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (bookingStep === "track-ride" && !rideCompleted) {
-      interval = setInterval(() => {
-        setCarProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setRideCompleted(true);
-            return 100;
+    if (bookingStep === "track-ride" && selectedDriver?.tripId) {
+      const tripId = selectedDriver.tripId;
+      const token = localStorage.getItem("accessToken");
+
+      const chatSocket = io("http://localhost:5000/chat", {
+        auth: { token }
+      });
+      const trackingSocket = io("http://localhost:5000/tracking", {
+        auth: { token }
+      });
+
+      chatSocket.emit("joinConversation", { tripId });
+      chatSocket.on("joinedConversation", ({ conversationId }) => {
+        setConversationIdState(conversationId);
+        chatApi.getMessages(tripId).then((res: any) => {
+          if (res.success) {
+            const mapped = res.data.map((m: any) => ({
+              sender: m.senderId === user?.id ? "user" : "driver",
+              text: m.content,
+              time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }));
+            setChatMessages(mapped);
           }
-          const next = prev + 10;
-          const remEta = Math.max(1, Math.ceil(5 - (next / 20)));
-          setEtaMinutes(remEta);
-          return next;
         });
-      }, 800);
-    } else {
-      setCarProgress(0);
-      setEtaMinutes(5);
-      setRideCompleted(false);
+      });
+
+      chatSocket.on("newMessage", (message) => {
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            sender: message.senderId === user?.id ? "user" : "driver",
+            text: message.content,
+            time: new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }
+        ]);
+      });
+
+      trackingSocket.emit("joinTrip", { tripId });
+      trackingSocket.on("locationUpdate", (loc) => {
+        if (selectedDriver.role === "passenger") {
+          setCarProgress(Math.min(100, Math.round(Math.random() * 30 + 50)));
+          setEtaMinutes(3);
+        }
+      });
+
+      setSocket({ chat: chatSocket, tracking: trackingSocket });
+
+      let pingInterval: NodeJS.Timeout;
+      if (selectedDriver.role === "driver") {
+        let progress = 0;
+        pingInterval = setInterval(() => {
+          progress += 10;
+          if (progress > 100) progress = 100;
+
+          const coords = getLocationCoords(startLocation);
+          const destCoords = getLocationCoords(destLocation);
+
+          const lat = coords.lat + (destCoords.lat - coords.lat) * (progress / 100);
+          const lng = coords.lng + (destCoords.lng - coords.lng) * (progress / 100);
+
+          trackingSocket.emit("pingLocation", {
+            tripId,
+            lat,
+            lng,
+            speed: 40,
+            heading: 90
+          });
+
+          setCarProgress(progress);
+          setEtaMinutes(Math.max(1, Math.ceil(5 - (progress / 20))));
+
+          if (progress === 100) {
+            clearInterval(pingInterval);
+          }
+        }, 3000);
+      }
+
+      return () => {
+        chatSocket.disconnect();
+        trackingSocket.disconnect();
+        if (pingInterval) clearInterval(pingInterval);
+      };
     }
-    return () => clearInterval(interval);
-  }, [bookingStep, rideCompleted]);
+  }, [bookingStep, selectedDriver]);
 
-  // Wallet and recharge state
-  const [walletBalance, setWalletBalance] = useState(450);
-  const [walletLogs, setWalletLogs] = useState([
-    { id: 1, type: "Debit", desc: "Ride with Raj Patel", amount: 120, date: "18 Jul 2026" },
-    { id: 2, type: "Credit", desc: "UPI Recharge", amount: 500, date: "17 Jul 2026" },
-    { id: 3, type: "Debit", desc: "Ride with Krishna Singh", amount: 120, date: "15 Jul 2026" }
-  ]);
-  const [rechargeAmt, setRechargeAmt] = useState("500");
-  const [rechargeMethod, setRechargeMethod] = useState<"card" | "upi">("upi");
-  const [rechargeUpiId, setRechargeUpiId] = useState("username@paytm");
-
-  // Payment Method Selection
-  const [payMethod, setPayMethod] = useState<"cash" | "card" | "upi" | "wallet">("wallet");
-  const [payUpiId, setPayUpiId] = useState("deroaddict@okaxis");
-
-  // Chat & Call popups simulation state
-  const [showChat, setShowChat] = useState(false);
-  const [showCall, setShowCall] = useState(false);
-  const [callDuration, setCallDuration] = useState(0);
-  const [chatMessages, setChatMessages] = useState([
-    { sender: "driver", text: "Hello! I am on my way to Iskcon pick up point.", time: "5:08 PM" },
-    { sender: "user", text: "Great! I am waiting near the main cross road.", time: "5:09 PM" }
-  ]);
-  const [newMessage, setNewMessage] = useState("");
-
-  // Trips lists
-  const [passengerTrips, setPassengerTrips] = useState([
-    {
-      id: "active-ptrip",
-      driverName: "Raj Patel",
-      route: "Iskcon to Infocity",
-      time: "07:00 PM 18/July/26",
-      vehicle: "Swift Dzire",
-      plate: "GJ01AB1234",
-      start: "Iskcon",
-      dest: "Infocity",
-      fare: "₹120 / Seat 1",
-      status: "Active Booked"
-    }
-  ]);
-
-  const [driverTrips, setDriverTrips] = useState<any[]>([]);
-
-  // Simulated active call duration
+  // Active call duration timer
   useEffect(() => {
     let callTimer: NodeJS.Timeout;
     if (showCall) {
@@ -260,75 +395,240 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newMessage.trim()) {
-      setChatMessages((prev) => [
-        ...prev,
-        { sender: "user", text: newMessage.trim(), time: "5:12 PM" }
-      ]);
+    if (newMessage.trim() && socket?.chat && conversationIdState) {
+      socket.chat.emit("sendMessage", {
+        conversationId: conversationIdState,
+        content: newMessage.trim()
+      });
       setNewMessage("");
-      setTimeout(() => {
-        setChatMessages((prev) => [
-          ...prev,
-          { sender: "driver", text: "Sounds good, see you in a minute!", time: "5:12 PM" }
-        ]);
-      }, 1200);
     }
   };
 
-  const handleRechargeWallet = (e: React.FormEvent) => {
+  const handleRechargeWallet = async (e: React.FormEvent) => {
     e.preventDefault();
     const amt = parseFloat(rechargeAmt);
     if (!isNaN(amt) && amt > 0) {
-      setWalletBalance((prev) => prev + amt);
-      setWalletLogs((prev) => [
-        { id: Date.now(), type: "Credit", desc: "Wallet Top-up", amount: amt, date: "18 Jul 2026" },
-        ...prev
-      ]);
-      setWalletView("summary");
-      setRechargeAmt("500");
+      try {
+        await walletApi.recharge(amt);
+        await refreshWallet();
+        addNotification("Wallet Top-up", `Successfully recharged ₹${amt} via ${rechargeMethod.toUpperCase()}.`, "SUCCESS");
+        setWalletView("summary");
+        setRechargeAmt("500");
+      } catch (err: any) {
+        alert(err?.message || "Failed to recharge wallet.");
+      }
     }
   };
 
   const handleFinalPayment = () => {
-    const fare = selectedDriver.price;
-    if (payMethod === "wallet") {
-      if (walletBalance < fare) {
-        alert("Insufficient wallet balance. Please recharge or select another payment method.");
-        return;
-      }
-      setWalletBalance((prev) => prev - fare);
-    }
-
-    // Add to logs
-    setWalletLogs((prev) => [
-      { id: Date.now(), type: "Debit", desc: `Ride with ${selectedDriver.name} (Paid via ${payMethod.toUpperCase()})`, amount: fare, date: "18 Jul 2026" },
-      ...prev
-    ]);
-
-    // Go to history tab
-    setActiveTab("history");
+    addNotification("Payment Settled", `Fare payment of ₹${selectedDriver?.price || 120} cleared successfully from escrow.`, "SUCCESS");
     setBookingStep("find-ride");
   };
 
-  // Handler for publishing an offered ride
-  const handlePublishRide = () => {
-    // Stage new driver trip
-    const newTrip = {
-      id: Date.now().toString(),
-      driverName: "You (Driver)",
-      route: `${startLocation} to ${destLocation}`,
-      time: dateTime,
-      vehicle: vehiclesList[0]?.model || "Registered Vehicle",
-      plate: vehiclesList[0]?.plate || "GJ01XX0000",
-      start: startLocation,
-      dest: destLocation,
-      fare: `₹${farePerSeat} / Seat 1`,
-      status: "Published",
-      passengerName: "No passengers yet"
-    };
+  // Handler for publishing offered rides (with route validation step first)
+  const handlePublishRide = async () => {
+    if (vehicles.length === 0) {
+      addNotification("Vehicle Required", "You must register a vehicle first before offering rides.", "WARNING");
+      return;
+    }
+    const verifiedVehicles = vehicles.filter(v => v.verificationStatus === 'VERIFIED');
+    if (verifiedVehicles.length === 0) {
+      addNotification("Verification Required", "Your vehicle must be approved by admin before you can offer rides.", "WARNING");
+      return;
+    }
 
-    setDriverTrips((prev) => [newTrip, ...prev]);
-    setBookingStep("publish-finish");
+    setLoadingBooking(true);
+    try {
+      const coords = getLocationCoords(startLocation);
+      const destCoords = getLocationCoords(destLocation);
+
+      // Create Ride
+      await ridesApi.create({
+        vehicleId: verifiedVehicles[0].id,
+        pickupAddress: startLocation,
+        pickupLat: coords.lat,
+        pickupLng: coords.lng,
+        destinationAddress: destLocation,
+        destinationLat: destCoords.lat,
+        destinationLng: destCoords.lng,
+        date: parseDateTimeInput(dateTime),
+        time: dateTime.includes(":") ? dateTime.split(",")[1]?.trim() || "18:00" : "18:00",
+        availableSeats: Number(seats),
+        farePerSeat: Number(farePerSeat),
+        recurring: isRecurring
+      });
+
+      addNotification("Ride Offered", "Offered ride successfully published.", "SUCCESS");
+      setBookingStep("publish-finish");
+      await loadDashboardData();
+    } catch (err: any) {
+      addNotification("Publish Failed", err?.message || "Failed to publish offered ride.", "ERROR");
+    } finally {
+      setLoadingBooking(false);
+    }
+  };
+
+  const handleConfirmRouteStep = async () => {
+    setLoadingRoute(true);
+    try {
+      const coords = getLocationCoords(startLocation);
+      const destCoords = getLocationCoords(destLocation);
+      const res = (await ridesApi.confirmRoute({
+        pickupLat: coords.lat,
+        pickupLng: coords.lng,
+        destinationLat: destCoords.lat,
+        destinationLng: destCoords.lng
+      })) as any;
+      if (res.success && res.data) {
+        setRouteData(res.data);
+        
+        // If find-ride, also perform search queries to fetch available matched rides
+        if (bookingType === "find") {
+          const searchRes = (await ridesApi.search({
+            pickupLat: coords.lat,
+            pickupLng: coords.lng,
+            destinationLat: destCoords.lat,
+            destinationLng: destCoords.lng,
+            date: parseDateTimeInput(dateTime),
+            seatsNeeded: seats
+          })) as any;
+          if (searchRes.success) {
+            const mapped = searchRes.data.map((ride: any) => ({
+              id: ride.id,
+              name: `${ride.driver.firstName} ${ride.driver.lastName}`,
+              time: `${ride.time} on ${new Date(ride.date).toLocaleDateString()}`,
+              route: `${ride.pickupAddress} to ${ride.destinationAddress}`,
+              price: Number(ride.farePerSeat),
+              seats: `${ride.availableSeats} Seats Available`,
+              rating: 4.8,
+              car: ride.vehicle.model,
+              plate: ride.vehicle.registrationNumber,
+              raw: ride
+            }));
+            setAvailableRidesList(mapped);
+          }
+        }
+        
+        setBookingStep("confirm-route");
+      }
+    } catch (err: any) {
+      addNotification("Route Calculation Failed", err?.message || "Failed to confirm route.", "WARNING");
+    } finally {
+      setLoadingRoute(false);
+    }
+  };
+
+  const handleBookNow = async (driver: any) => {
+    setLoadingBooking(true);
+    try {
+      const rideId = driver.raw?.id || driver.id;
+      const fare = driver.price * seats;
+      
+      if (wallet && Number(wallet.availableBalance) < fare) {
+        addNotification("Insufficient Balance", "Recharge your wallet to book this ride.", "WARNING");
+        setBookingStep("payment-method");
+        setLoadingBooking(false);
+        return;
+      }
+      
+      const res = (await bookingsApi.create({
+        rideId,
+        seatsBooked: seats
+      })) as any;
+      
+      if (res.success && res.data) {
+        addNotification("Booking Requested", `Booking request sent to ${driver.name}. Awaiting approval.`, "SUCCESS");
+        setSelectedRide(res.data);
+        await refreshWallet();
+        await loadDashboardData();
+        setBookingStep("find-ride");
+        setActiveTab("trips");
+      }
+    } catch (err: any) {
+      addNotification("Booking Failed", err?.message || "Failed to book ride.", "ERROR");
+    } finally {
+      setLoadingBooking(false);
+    }
+  };
+
+  const handleUpdateBookingStatus = async (bookingId: string, status: 'CONFIRMED' | 'REJECTED') => {
+    try {
+      const res = (await bookingsApi.updateStatus(bookingId, { status })) as any;
+      if (res.success) {
+        addNotification("Booking Updated", `Booking request has been ${status.toLowerCase()}.`, "SUCCESS");
+        await loadDashboardData();
+      }
+    } catch (err: any) {
+      addNotification("Update Failed", err?.message || "Failed to update booking status.", "ERROR");
+    }
+  };
+
+  const handleStartTrip = async (trip: any) => {
+    if (!trip.tripId) {
+      addNotification("No active bookings", "A trip can only start if there is at least one confirmed booking.", "WARNING");
+      return;
+    }
+    try {
+      const res = (await tripsApi.updateStatus(trip.tripId, { status: 'STARTED' })) as any;
+      if (res.success) {
+        addNotification("Trip Started", `Trip #${trip.tripId} has been started!`, "SUCCESS");
+        
+        setSelectedDriver({
+          id: "driver-self",
+          name: "You (Driver)",
+          time: trip.time,
+          route: trip.route,
+          price: 0,
+          seats: "",
+          rating: 5.0,
+          car: trip.vehicle,
+          plate: trip.plate,
+          tripId: trip.tripId,
+          role: "driver"
+        });
+        
+        setBookingStep("track-ride");
+        setActiveTab("dashboard");
+        await loadDashboardData();
+      }
+    } catch (err: any) {
+      addNotification("Failed to start", err?.message || "Failed to start trip.", "ERROR");
+    }
+  };
+
+  const handleCompleteTrip = async () => {
+    const tripId = selectedDriver?.tripId;
+    if (!tripId) return;
+    try {
+      const res = (await tripsApi.updateStatus(tripId, { status: 'COMPLETED' })) as any;
+      if (res.success) {
+        addNotification("Trip Completed", "Trip successfully completed! Funds settled.", "SUCCESS");
+        setBookingStep("find-ride");
+        setActiveTab("trips");
+        await loadDashboardData();
+        await refreshWallet();
+      }
+    } catch (err: any) {
+      addNotification("Error", err?.message || "Failed to complete trip.", "ERROR");
+    }
+  };
+
+  const submitReview = async () => {
+    if (!selectedDriver?.tripId) return;
+    try {
+      await ratingsApi.create({
+        tripId: selectedDriver.tripId,
+        revieweeId: selectedDriver.id === "driver-self" ? "passenger-id" : selectedDriver.id, // simplified reviewee target
+        rating: passengerRating,
+        reviewText: reviewComment,
+        type: selectedDriver.role === "driver" ? "DRIVER_TO_PASSENGER" : "PASSENGER_TO_DRIVER"
+      });
+      addNotification("Rating Submitted", "Thank you for your feedback!", "SUCCESS");
+      setBookingStep("payment-method");
+    } catch (err: any) {
+      alert("Failed to submit rating. You might have already rated this trip.");
+      setBookingStep("payment-method");
+    }
   };
 
   const handleSwapLocations = () => {
@@ -343,18 +643,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  // Coordinates for mock tracking car
   const getCarCoordinates = (progress: number) => {
     const startX = 80;
     const startY = 240;
     const endX = 360;
     const endY = 60;
-
-    const currentX = startX + (endX - startX) * (progress / 100);
+    const x = startX + (endX - startX) * (progress / 100);
+    const y = startY + (endY - startY) * (progress / 100);
     const waveOffset = Math.sin((progress / 100) * Math.PI * 2) * 20;
-    const currentY = startY + (endY - startY) * (progress / 100) + waveOffset;
-
-    return { x: currentX, y: currentY };
+    const currentY = y + waveOffset;
+    return { x, y: currentY };
   };
 
   const currentCarPos = getCarCoordinates(carProgress);
@@ -469,7 +767,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                   </div>
 
                   {/* If Offer Ride is selected, perform the VEHICLE REGISTRATION lock check */}
-                  {bookingType === "offer" && vehiclesList.length === 0 ? (
+                  {bookingType === "offer" && vehicles.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50/50 p-8 text-center max-w-xl mx-auto my-6">
                       <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-600 border border-amber-200">
                         <AlertCircle className="h-6 w-6" />
@@ -601,18 +899,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
 
                       {/* Action Button */}
                       <button
-                        onClick={() => {
-                          if (bookingType === "find") {
-                            setBookingStep("confirm-route");
-                          } else {
-                            // Offer/Publish path goes directly to route confirmation with publishing outcome
-                            setBookingStep("confirm-route");
-                          }
-                        }}
-                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 py-4 text-sm font-semibold text-white transition-all hover:bg-zinc-800 active:scale-[0.99]"
+                        disabled={loadingRoute}
+                        onClick={handleConfirmRouteStep}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 py-4 text-sm font-semibold text-white transition-all hover:bg-zinc-800 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <span>{bookingType === "find" ? "Find Ride" : "Publish Ride"}</span>
-                        <ArrowRight className="h-4 w-4" />
+                        <span>{loadingRoute ? "Calculating Route..." : (bookingType === "find" ? "Find Ride" : "Publish Ride")}</span>
+                        {!loadingRoute && <ArrowRight className="h-4 w-4" />}
                       </button>
                     </div>
                   )}
@@ -649,12 +941,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                           <span>Route Found</span>
                         </h4>
                         <p className="text-[10px] text-indigo-700 font-medium mt-1">
-                          Connecting via SP Ring Rd. Estimated travel time is 33 minutes (26 km).
+                          Connecting via SP Ring Rd. Estimated travel time is {routeData ? Math.round(routeData.durationSeconds / 60) : 33} minutes ({routeData ? (routeData.distanceMeters / 1000).toFixed(1) : 26} km).
                         </p>
                       </div>
                     </div>
 
                     <button
+                      disabled={loadingBooking}
                       onClick={() => {
                         if (bookingType === "find") {
                           setBookingStep("available-rides");
@@ -662,9 +955,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                           handlePublishRide();
                         }
                       }}
-                      className="mt-6 w-full rounded-xl bg-zinc-900 py-3.5 text-sm font-semibold text-white hover:bg-zinc-800 transition-all active:scale-95"
+                      className="mt-6 w-full rounded-xl bg-zinc-900 py-3.5 text-sm font-semibold text-white hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {bookingType === "find" ? "Confirm Route" : "Confirm and Publish"}
+                      {loadingBooking ? "Publishing..." : (bookingType === "find" ? "Confirm Route" : "Confirm and Publish")}
                     </button>
                   </div>
 
@@ -693,58 +986,66 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                 <div>
                   <button
                     onClick={() => setBookingStep("confirm-route")}
-                    className="group mb-6 flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-indigo-600 transition-all"
+                    className="group mb-6 flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-indigo-650 transition-all"
                   >
                     <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
                     <span>Available Rides</span>
                   </button>
 
                   <div className="space-y-4">
-                    {drivers.map((driver) => (
-                      <div
-                        key={driver.id}
-                        className="flex flex-col justify-between rounded-2xl border border-zinc-150 bg-white p-5 hover:border-indigo-200 hover:shadow-md transition-all sm:flex-row sm:items-center"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="relative h-12 w-12 flex items-center justify-center rounded-full bg-zinc-100 border border-zinc-200">
-                            <User className="h-6 w-6 text-zinc-500" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-bold text-zinc-900">{driver.name}</h3>
-                              <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[9px] font-extrabold text-indigo-600">
-                                ★ {driver.rating}
+                    {availableRidesList.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-zinc-200 bg-white p-8 text-center">
+                        <p className="text-sm font-semibold text-zinc-500">No matching rides found.</p>
+                        <p className="text-xs text-zinc-400 mt-1">Try adjusting your parameters or check if other organization employees registered active rides.</p>
+                      </div>
+                    ) : (
+                      availableRidesList.map((driver) => (
+                        <div
+                          key={driver.id}
+                          className="flex flex-col justify-between rounded-2xl border border-zinc-150 bg-white p-5 hover:border-indigo-200 hover:shadow-md transition-all sm:flex-row sm:items-center"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="relative h-12 w-12 flex items-center justify-center rounded-full bg-zinc-100 border border-zinc-200">
+                              <User className="h-6 w-6 text-zinc-500" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-bold text-zinc-900">{driver.name}</h3>
+                                <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[9px] font-extrabold text-indigo-600">
+                                  ★ {driver.rating}
+                                </span>
+                              </div>
+                              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mt-0.5 block">
+                                {driver.car} · {driver.plate}
+                              </span>
+                              <span className="text-xs text-zinc-400 mt-1 block">
+                                {driver.time}
                               </span>
                             </div>
-                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mt-0.5 block">
-                              {driver.car} · {driver.plate}
-                            </span>
-                            <span className="text-xs text-zinc-400 mt-1 block">
-                              {driver.time}
+                          </div>
+
+                          <div className="my-4 border-t border-zinc-100 pt-4 sm:my-0 sm:border-t-0 sm:pt-0 text-left sm:text-right">
+                            <div className="text-lg font-black text-zinc-900">₹ {driver.price}</div>
+                            <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full inline-block mt-1">
+                              {driver.seats}
                             </span>
                           </div>
-                        </div>
 
-                        <div className="my-4 border-t border-zinc-100 pt-4 sm:my-0 sm:border-t-0 sm:pt-0 text-left sm:text-right">
-                          <div className="text-lg font-black text-zinc-900">₹ {driver.price}</div>
-                          <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full inline-block mt-1">
-                            {driver.seats}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              disabled={loadingBooking}
+                              onClick={() => {
+                                setSelectedDriver(driver);
+                                handleBookNow(driver);
+                              }}
+                              className="flex-1 rounded-xl bg-zinc-900 px-5 py-3 text-xs font-bold text-white hover:bg-zinc-800 transition-all text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {loadingBooking && selectedDriver?.id === driver.id ? "Booking..." : "Book Now"}
+                            </button>
+                          </div>
                         </div>
-
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => {
-                              setSelectedDriver(driver);
-                              setBookingStep("track-ride");
-                            }}
-                            className="flex-1 rounded-xl bg-zinc-900 px-5 py-3 text-xs font-bold text-white hover:bg-zinc-800 transition-all text-center"
-                          >
-                            Book Now
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </div>
               )}
@@ -788,21 +1089,40 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                     </div>
 
                     <div className="mt-6 rounded-xl bg-indigo-600 p-4 text-white text-center shadow-lg shadow-indigo-100">
-                      {rideCompleted ? (
+                      {selectedDriver.role === "driver" ? (
                         <div>
-                          <span className="block text-xs font-bold uppercase tracking-wider text-indigo-200">Trip Status</span>
-                          <span className="text-lg font-black block mt-0.5">Driver Has Arrived!</span>
-                          <button
-                            onClick={() => setBookingStep("trip-finish")}
-                            className="mt-3 w-full rounded-lg bg-white px-4 py-2 text-xs font-bold text-indigo-600 shadow-sm active:scale-95 transition-all"
-                          >
-                            Proceed to Summary
-                          </button>
+                          <span className="block text-xs font-bold uppercase tracking-wider text-indigo-200">Trip Progress</span>
+                          <span className="text-lg font-black block mt-0.5">
+                            {carProgress}% Completed ({etaMinutes}m left)
+                          </span>
+                          {carProgress === 100 && (
+                            <button
+                              onClick={handleCompleteTrip}
+                              className="mt-3 w-full rounded-lg bg-white px-4 py-2 text-xs font-bold text-indigo-600 shadow-sm active:scale-95 transition-all"
+                            >
+                              Complete Trip
+                            </button>
+                          )}
                         </div>
                       ) : (
                         <div>
-                          <span className="block text-xs font-bold uppercase tracking-wider text-indigo-200">Estimated Arrival</span>
-                          <span className="text-2xl font-black block mt-0.5">Coming in {etaMinutes} Minutes</span>
+                          {carProgress === 100 ? (
+                            <div>
+                              <span className="block text-xs font-bold uppercase tracking-wider text-indigo-200">Trip Status</span>
+                              <span className="text-lg font-black block mt-0.5">Driver Has Arrived!</span>
+                              <button
+                                onClick={() => setBookingStep("trip-finish")}
+                                className="mt-3 w-full rounded-lg bg-white px-4 py-2 text-xs font-bold text-indigo-600 shadow-sm active:scale-95 transition-all"
+                              >
+                                Proceed to Summary
+                              </button>
+                            </div>
+                          ) : (
+                            <div>
+                              <span className="block text-xs font-bold uppercase tracking-wider text-indigo-200">Estimated Arrival</span>
+                              <span className="text-2xl font-black block mt-0.5">Coming in {etaMinutes} Minutes</span>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -910,7 +1230,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                           <input type="radio" checked={payMethod === "wallet"} onChange={() => setPayMethod("wallet")} className="h-4 w-4 text-indigo-600" />
                           <div>
                             <span className="text-sm font-bold text-zinc-800 block">Wallet Payment</span>
-                            <span className="text-[10px] text-zinc-400 font-bold">Balance: ₹ {walletBalance}</span>
+                            <span className="text-[10px] text-zinc-400 font-bold">Balance: ₹ {wallet ? wallet.availableBalance : 0}</span>
                           </div>
                         </div>
                       </label>
@@ -987,7 +1307,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                     </div>
                   </div>
 
-                  {/* Render passenger bookings list */}
+                         {/* Render passenger bookings list */}
                   {tripsRole === "passenger" ? (
                     <div className="space-y-4">
                       {passengerTrips.length === 0 ? (
@@ -998,7 +1318,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                         passengerTrips.map((trip) => (
                           <div
                             key={trip.id}
-                            onClick={() => setTripsView("detail")}
+                            onClick={() => {
+                              setSelectedTrip(trip);
+                              setTripsView("detail");
+                            }}
                             className="group flex flex-col justify-between rounded-2xl border border-zinc-150 bg-[#fafafa]/50 p-5 hover:border-indigo-200 hover:bg-white transition-all sm:flex-row sm:items-center cursor-pointer shadow-sm"
                           >
                             <div className="flex items-center gap-4">
@@ -1008,7 +1331,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                               <div>
                                 <div className="flex items-center gap-2">
                                   <h3 className="font-extrabold text-zinc-800">{trip.route}</h3>
-                                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-600 border border-emerald-100">
+                                  <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold border ${
+                                    trip.status === 'CONFIRMED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                    trip.status === 'PENDING' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-zinc-100 text-zinc-500'
+                                  }`}>
                                     {trip.status}
                                   </span>
                                 </div>
@@ -1018,8 +1344,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                               </div>
                             </div>
                             <div className="mt-4 sm:mt-0 flex items-center gap-2">
-                              <span className="text-xs font-bold text-zinc-400 group-hover:text-indigo-600 transition-colors">Trip Details</span>
-                              <ArrowRight className="h-4 w-4 text-zinc-400 group-hover:text-indigo-600 transition-transform" />
+                              <span className="text-xs font-bold text-zinc-400 group-hover:text-indigo-650 transition-colors">Trip Details</span>
+                              <ArrowRight className="h-4 w-4 text-zinc-400 group-hover:text-indigo-650 transition-transform" />
                             </div>
                           </div>
                         ))
@@ -1039,11 +1365,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                             key={trip.id}
                             className="flex flex-col justify-between rounded-2xl border border-zinc-150 bg-[#fafafa]/50 p-5 hover:border-indigo-200 hover:bg-white transition-all sm:flex-row sm:items-center shadow-sm"
                           >
-                            <div className="flex items-center gap-4">
-                              <div className="h-12 w-12 flex items-center justify-center rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600">
+                            <div className="flex-1 flex items-start gap-4">
+                              <div className="h-12 w-12 flex items-center justify-center rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 mt-1">
                                 <Navigation className="h-6 w-6" />
                               </div>
-                              <div>
+                              <div className="flex-1">
                                 <div className="flex items-center gap-2">
                                   <h3 className="font-extrabold text-zinc-800">{trip.route}</h3>
                                   <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[9px] font-bold text-indigo-600 border border-indigo-100">
@@ -1054,33 +1380,84 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                                   Vehicle: {trip.vehicle} · Plate: {trip.plate} · Time: {trip.time}
                                 </span>
                                 <span className="text-[10px] text-zinc-400 font-bold block mt-1">
-                                  Passengers: {trip.passengerName}
+                                  Confirmed Passengers: {trip.passengerName}
                                 </span>
+
+                                {/* Confirmed / Pending Bookings Approval Panel */}
+                                {trip.bookings && trip.bookings.length > 0 && (
+                                  <div className="mt-3 space-y-2 border-t border-zinc-100 pt-2">
+                                    <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Bookings & Requests</p>
+                                    {trip.bookings.map((booking: any) => (
+                                      <div key={booking.id} className="flex justify-between items-center bg-zinc-50 p-2.5 rounded-xl border border-zinc-100 mt-1.5">
+                                        <div>
+                                          <span className="text-xs font-bold text-zinc-700">{booking.passenger.firstName} {booking.passenger.lastName}</span>
+                                          <span className="text-[10px] text-zinc-400 ml-2">({booking.seatsBooked} seats)</span>
+                                          <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded ml-2 ${
+                                            booking.status === 'CONFIRMED' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                                            booking.status === 'PENDING' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-red-50 text-red-600 border border-red-100'
+                                          }`}>{booking.status}</span>
+                                        </div>
+                                        {booking.status === 'PENDING' && (
+                                          <div className="flex gap-1.5">
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleUpdateBookingStatus(booking.id, 'CONFIRMED');
+                                              }}
+                                              className="px-2.5 py-1 text-[10px] font-bold bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                                            >
+                                              Approve
+                                            </button>
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleUpdateBookingStatus(booking.id, 'REJECTED');
+                                              }}
+                                              className="px-2.5 py-1 text-[10px] font-bold bg-zinc-200 text-zinc-700 rounded-md hover:bg-zinc-350 transition-colors"
+                                            >
+                                              Reject
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </div>
                             <div className="mt-4 sm:mt-0 flex gap-2">
-                              <button
-                                onClick={() => {
-                                  // simulate starting the trip as driver
-                                  alert("Trip started! Passengers have been notified. Navigating to active tracking map.");
-                                  setSelectedDriver({
-                                    id: "driver-self",
-                                    name: "You (Driver)",
-                                    time: trip.time,
-                                    route: trip.route,
-                                    price: parseInt(farePerSeat),
-                                    seats: "4 Seats",
-                                    rating: 5.0,
-                                    car: trip.vehicle,
-                                    plate: trip.plate
-                                  });
-                                  setBookingStep("track-ride");
-                                  setActiveTab("dashboard");
-                                }}
-                                className="rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-indigo-700 shadow-sm"
-                              >
-                                Start Trip
-                              </button>
+                              {(trip.status === 'OPEN' || trip.status === 'FULL') && trip.tripId && (
+                                <button
+                                  onClick={() => handleStartTrip(trip)}
+                                  className="rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-indigo-700 shadow-sm"
+                                >
+                                  Start Trip
+                                </button>
+                              )}
+                              {trip.status === 'STARTED' && trip.tripId && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedDriver({
+                                      id: "driver-self",
+                                      name: "You (Driver)",
+                                      time: trip.time,
+                                      route: trip.route,
+                                      price: 0,
+                                      seats: "",
+                                      rating: 5.0,
+                                      car: trip.vehicle,
+                                      plate: trip.plate,
+                                      tripId: trip.tripId,
+                                      role: "driver"
+                                    });
+                                    setBookingStep("track-ride");
+                                    setActiveTab("dashboard");
+                                  }}
+                                  className="rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-emerald-700 shadow-sm"
+                                >
+                                  Track Trip
+                                </button>
+                              )}
                             </div>
                           </div>
                         ))
@@ -1091,11 +1468,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
               )}
 
               {/* SUBVIEW: DETAIL */}
-              {tripsView === "detail" && (
+              {tripsView === "detail" && selectedTrip && (
                 <div>
                   <button
-                    onClick={() => setTripsView("list")}
-                    className="group mb-6 flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-indigo-600 transition-all"
+                    onClick={() => {
+                      setSelectedTrip(null);
+                      setTripsView("list");
+                    }}
+                    className="group mb-6 flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-indigo-650 transition-all"
                   >
                     <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
                     <span>Trip Detail</span>
@@ -1108,11 +1488,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                           <User className="h-5 w-5 text-zinc-500" />
                         </div>
                         <div>
-                          <h3 className="font-bold text-zinc-900">Raj Patel</h3>
-                          <span className="text-xs text-zinc-400">iskcon to Infocity</span>
+                          <h3 className="font-bold text-zinc-900">{selectedTrip.driverName}</h3>
+                          <span className="text-xs text-zinc-400">{selectedTrip.route}</span>
                         </div>
                       </div>
-                      <span className="text-xs text-zinc-400 font-semibold">07:00 PM 18/July/26</span>
+                      <span className="text-xs text-zinc-400 font-semibold">{selectedTrip.time}</span>
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-6">
@@ -1120,22 +1500,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                         <span className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Vehicle</span>
                         <span className="text-sm font-bold text-zinc-800 mt-1  flex items-center justify-center gap-1.5">
                           <Car className="h-4 w-4 text-indigo-500" />
-                          <span>Swift Dzire</span>
+                          <span>{selectedTrip.vehicle}</span>
                         </span>
-                        <span className="text-[10px] text-zinc-400 block mt-0.5">GJ01AB1234</span>
+                        <span className="text-[10px] text-zinc-400 block mt-0.5">{selectedTrip.plate}</span>
                       </div>
                       <div className="rounded-xl border border-zinc-150 p-4 text-center bg-zinc-50/50">
                         <span className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Pick UP Point</span>
                         <span className="text-sm font-bold text-zinc-800 mt-1  flex items-center justify-center gap-1.5">
                           <MapPin className="h-4 w-4 text-indigo-500" />
-                          <span>Iskcon</span>
+                          <span>{selectedTrip.start}</span>
                         </span>
                       </div>
                       <div className="rounded-xl border border-zinc-150 p-4 text-center bg-zinc-50/50">
                         <span className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Drop Point</span>
                         <span className="text-sm font-bold text-zinc-800 mt-1  flex items-center justify-center gap-1.5">
                           <MapPin className="h-4 w-4 text-indigo-500" />
-                          <span>Infocity</span>
+                          <span>{selectedTrip.dest}</span>
                         </span>
                       </div>
                     </div>
@@ -1159,8 +1539,35 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
 
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Fare Rate</span>
-                      <span className="text-xl font-black text-zinc-950">₹ 120 / Seat 1</span>
+                      <span className="text-xl font-black text-zinc-950">{selectedTrip.fare}</span>
                     </div>
+
+                    {/* Track active trip link */}
+                    {(selectedTrip.status === 'CONFIRMED' || selectedTrip.status === 'STARTED') && selectedTrip.tripId && (
+                      <button
+                        onClick={() => {
+                          setSelectedDriver({
+                            id: selectedTrip.raw.ride.driver.id,
+                            name: selectedTrip.driverName,
+                            time: selectedTrip.time,
+                            route: selectedTrip.route,
+                            price: Number(selectedTrip.raw.fare),
+                            seats: `${selectedTrip.raw.seatsBooked} seats`,
+                            rating: 4.8,
+                            car: selectedTrip.vehicle,
+                            plate: selectedTrip.plate,
+                            tripId: selectedTrip.tripId,
+                            role: "passenger"
+                          });
+                          setBookingStep("track-ride");
+                          setActiveTab("dashboard");
+                        }}
+                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-650 py-3 text-xs font-bold text-white hover:bg-indigo-750 shadow-sm active:scale-95 transition-all mt-4"
+                      >
+                        <Navigation className="h-4 w-4" />
+                        <span>Track Active Ride</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -1188,7 +1595,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <div className="rounded-2xl bg-linear-to-br from-indigo-600 to-indigo-800 p-6 text-white shadow-lg shadow-indigo-100">
                       <span className="text-xs font-bold text-indigo-200 uppercase tracking-widest">Available Balance</span>
-                      <div className="text-4xl font-black mt-2">₹ {walletBalance}.00</div>
+                      <div className="text-4xl font-black mt-2">₹ {wallet ? wallet.availableBalance : 0}.00</div>
                     </div>
                     <div className="rounded-2xl border border-zinc-100 p-6 bg-zinc-50/50 flex flex-col justify-between">
                       <div>
@@ -1212,16 +1619,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-50">
-                          {walletLogs.map((log) => (
+                          {(wallet?.transactions || []).map((log: any) => (
                             <tr key={log.id} className="text-zinc-700">
                               <td className="py-3">
-                                <span className="font-semibold block text-sm">{log.desc}</span>
+                                <span className="font-semibold block text-sm">{log.description || "Wallet Transaction"}</span>
                                 <span className="text-[10px] text-zinc-400 font-bold uppercase">{log.type}</span>
                               </td>
-                              <td className="py-3 text-zinc-500">{log.date}</td>
-                              <td className={`py-3 text-right font-black ${log.type === "Credit" ? "text-emerald-600" : "text-red-500"
+                              <td className="py-3 text-zinc-500">{new Date(log.createdAt).toLocaleDateString()}</td>
+                              <td className={`py-3 text-right font-black ${log.type === "CREDIT" || log.type === "RECHARGE" ? "text-emerald-600" : "text-red-500"
                                 }`}>
-                                {log.type === "Credit" ? "+" : "-"} ₹{log.amount}
+                                {log.type === "CREDIT" || log.type === "RECHARGE" ? "+" : "-"} ₹{Number(log.amount)}
                               </td>
                             </tr>
                           ))}
@@ -1247,7 +1654,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                     <form onSubmit={handleRechargeWallet} className="flex-1 space-y-4">
                       <div className="flex justify-between items-center mb-4">
                         <h3 className="font-bold text-zinc-900">Add Money</h3>
-                        <span className="text-xs font-bold text-zinc-400">Balance: ₹ {walletBalance}</span>
+                        <span className="text-xs font-bold text-zinc-400">Balance: ₹ {wallet ? wallet.availableBalance : 0}</span>
                       </div>
 
                       <div className="space-y-1">
@@ -1503,13 +1910,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
 
                   {/* Registered Vehicle List */}
                   <div className="space-y-3">
-                    {vehiclesList.length === 0 ? (
+                    {vehicles.length === 0 ? (
                       <div className="rounded-xl border border-dashed border-zinc-200 p-4 text-center bg-zinc-50/50">
                         <span className="text-xs text-zinc-400 font-bold uppercase tracking-wider block">No Registered Vehicles</span>
                         <span className="text-[10px] text-zinc-500 block mt-1">Please register at least one vehicle to publish offered rides.</span>
                       </div>
                     ) : (
-                      vehiclesList.map((veh) => (
+                      vehicles.map((veh: any) => (
                         <div key={veh.id} className="flex items-center justify-between rounded-xl border border-zinc-150 bg-white p-4 shadow-sm">
                           <div className="flex items-center gap-3">
                             <div className="h-9 w-9 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
@@ -1517,7 +1924,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                             </div>
                             <div>
                               <span className="font-bold text-sm text-zinc-800 block">{veh.model}</span>
-                              <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">{veh.plate} · {veh.capacity} Seats Available</span>
+                              <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                                {veh.registrationNumber} · {veh.seatingCapacity} Seats · <span className={
+                                  veh.verificationStatus === 'VERIFIED' ? 'text-emerald-600' :
+                                  veh.verificationStatus === 'REJECTED' ? 'text-red-500' : 'text-amber-500'
+                                }>{veh.verificationStatus}</span>
+                              </span>
                             </div>
                           </div>
                           <button
@@ -1530,6 +1942,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onLogout }) => {
                       ))
                     )}
                   </div>
+
 
                   {/* Add Vehicle Form */}
                   <form onSubmit={handleRegisterVehicle} className="rounded-2xl border border-zinc-100 bg-zinc-50/30 p-5 space-y-4 shadow-inner">

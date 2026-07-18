@@ -5,12 +5,15 @@ import { SplashView } from "./components/SplashView";
 import { LoginView } from "./components/LoginView";
 import { SignUpView } from "./components/SignUpView";
 import { DashboardView } from "./components/DashboardView";
+import AdminDashboard from "@/admin/dashboard";
+import { useSession } from "@/src/context/SessionContext";
 
-type ViewState = "splash" | "login" | "signup" | "success";
+type ViewState = "splash" | "login" | "signup";
 
 export default function Home() {
   const [view, setView] = useState<ViewState>("splash");
   const [transitioning, setTransitioning] = useState(false);
+  const { user, loading, logout } = useSession();
 
   React.useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
@@ -30,6 +33,29 @@ export default function Home() {
     }, 300); // matches transition speed
   };
 
+  // Render loading state while restoring session from localStorage
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#fafafa] dark:bg-zinc-950">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+          <span className="text-sm font-semibold text-zinc-500 uppercase tracking-wider">
+            Loading Session...
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to appropriate dashboard if user is authenticated
+  if (user) {
+    if (user.role === "EMPLOYEE") {
+      return <DashboardView onLogout={logout} />;
+    } else {
+      return <AdminDashboard onLogout={logout} />;
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-[#fafafa]">
       {/* View Transition wrapper */}
@@ -46,7 +72,7 @@ export default function Home() {
           <LoginView
             onSignUpClick={() => changeView("signup")}
             onBackClick={() => changeView("splash")}
-            onLoginSuccess={() => changeView("success")}
+            onLoginSuccess={() => {}}
           />
         )}
 
@@ -54,14 +80,11 @@ export default function Home() {
           <SignUpView
             onLoginClick={() => changeView("login")}
             onBackClick={() => changeView("splash")}
-            onSignUpSuccess={() => changeView("success")}
+            onSignUpSuccess={() => changeView("login")}
           />
-        )}
-
-        {view === "success" && (
-          <DashboardView onLogout={() => changeView("splash")} />
         )}
       </div>
     </div>
   );
 }
+
