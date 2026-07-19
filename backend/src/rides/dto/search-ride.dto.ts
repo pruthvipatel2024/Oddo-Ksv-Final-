@@ -84,7 +84,7 @@ export class SearchRideDto {
   @IsInt()
   @Type(() => Number)
   @IsOptional()
-  timeWindowMinutes?: number = 30;
+  timeWindowMinutes?: number = 1440;
 
   @ApiProperty({
     example: 4.0,

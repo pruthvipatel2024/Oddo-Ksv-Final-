@@ -173,20 +173,27 @@ export class RidesService {
     const matches: any[] = [];
 
     for (const ride of openRides) {
+      console.log(`Checking ride: ${ride.id}`);
       // 0. Verify matching calendar day in local time offset (IST)
       const rideDayStr = toLocalDateString(new Date(ride.date));
+      console.log(`  - searchDayStr: ${searchDayStr}, rideDayStr: ${rideDayStr}`);
       if (searchDayStr !== rideDayStr) {
+        console.log('  -> Date mismatch');
         continue;
       }
 
       // 1. Check seat availability
       const seatsNeeded = dto.seatsNeeded || 1;
+      console.log(`  - seatsNeeded: ${seatsNeeded}, availableSeats: ${ride.availableSeats}`);
       if (ride.availableSeats < seatsNeeded) {
+        console.log('  -> Seat mismatch');
         continue;
       }
 
       // 2. Check maximum price constraint
+      console.log(`  - maxPrice: ${dto.maxPrice}, farePerSeat: ${ride.farePerSeat}`);
       if (dto.maxPrice && Number(ride.farePerSeat) > dto.maxPrice) {
+        console.log('  -> Price mismatch');
         continue;
       }
 
@@ -195,7 +202,9 @@ export class RidesService {
         const vehicleMatch = ride.vehicleType
           .toLowerCase()
           .includes(dto.vehicleType.toLowerCase());
+        console.log(`  - vehicleType: ${dto.vehicleType}, rideVehicleType: ${ride.vehicleType}, match: ${vehicleMatch}`);
         if (!vehicleMatch) {
+          console.log('  -> Vehicle mismatch');
           continue;
         }
       }
@@ -209,7 +218,9 @@ export class RidesService {
       );
 
       const pickupRadiusLimit = dto.pickupRadius ?? 2000;
+      console.log(`  - pickupDistance: ${pickupDistance}, limit: ${pickupRadiusLimit}`);
       if (pickupDistance > pickupRadiusLimit) {
+        console.log('  -> Pickup proximity mismatch');
         continue;
       }
 
@@ -222,7 +233,9 @@ export class RidesService {
       );
 
       const destRadiusLimit = dto.destinationRadius ?? 2000;
+      console.log(`  - destDistance: ${destDistance}, limit: ${destRadiusLimit}`);
       if (destDistance > destRadiusLimit) {
+        console.log('  -> Destination proximity mismatch');
         continue;
       }
 
@@ -230,8 +243,10 @@ export class RidesService {
       const [rideH, rideM] = ride.time.split(':').map(Number);
       const rideMinutesTotal = rideH * 60 + rideM;
       const timeDiff = Math.abs(rideMinutesTotal - searchMinutesTotal);
+      console.log(`  - rideTime: ${ride.time} (${rideMinutesTotal}m), searchTimeMinutes: ${searchMinutesTotal}m, diff: ${timeDiff}, limit: ${dto.timeWindowMinutes ?? 1440}`);
 
       if (timeDiff > (dto.timeWindowMinutes ?? 1440)) {
+        console.log('  -> Time window mismatch');
         continue;
       }
 
