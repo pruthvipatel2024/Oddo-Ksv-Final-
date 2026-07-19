@@ -209,34 +209,53 @@ export class RidesService {
         }
       }
 
-      // 4. Calculate pickup proximity
-      const pickupDistance = this.haversineDistance(
-        Number(ride.pickupLat),
-        Number(ride.pickupLng),
-        dto.pickupLat,
-        dto.pickupLng,
+      // 4. Calculate pickup proximity along the driver's route
+      const pickupProjection = this.projectPointToLineSegment(
+        dto.pickupLat, dto.pickupLng,
+        Number(ride.pickupLat), Number(ride.pickupLng),
+        Number(ride.destinationLat), Number(ride.destinationLng)
       );
-
-      const pickupRadiusLimit = dto.pickupRadius ?? 2000;
+      
+      const exactPickupDistance = this.haversineDistance(
+        Number(ride.pickupLat), Number(ride.pickupLng), 
+        dto.pickupLat, dto.pickupLng
+      );
+      
+      // Minimum of exact distance or distance to the line segment
+      const pickupDistance = Math.min(pickupProjection.distance, exactPickupDistance);
+      const pickupRadiusLimit = dto.pickupRadius ?? 5000; // Increased to 5km for practical detour matching
+      
       console.log(`  - pickupDistance: ${pickupDistance}, limit: ${pickupRadiusLimit}`);
       if (pickupDistance > pickupRadiusLimit) {
         console.log('  -> Pickup proximity mismatch');
         continue;
       }
 
-      // 5. Calculate destination proximity
-      const destDistance = this.haversineDistance(
-        Number(ride.destinationLat),
-        Number(ride.destinationLng),
-        dto.destinationLat,
-        dto.destinationLng,
+      // 5. Calculate destination proximity along the driver's route
+      const destProjection = this.projectPointToLineSegment(
+        dto.destinationLat, dto.destinationLng,
+        Number(ride.pickupLat), Number(ride.pickupLng),
+        Number(ride.destinationLat), Number(ride.destinationLng)
       );
+      
+      const exactDestDistance = this.haversineDistance(
+        Number(ride.destinationLat), Number(ride.destinationLng), 
+        dto.destinationLat, dto.destinationLng
+      );
+      
+      const destDistance = Math.min(destProjection.distance, exactDestDistance);
+      const destRadiusLimit = dto.destinationRadius ?? 5000;
 
-      const destRadiusLimit = dto.destinationRadius ?? 2000;
       console.log(`  - destDistance: ${destDistance}, limit: ${destRadiusLimit}`);
       if (destDistance > destRadiusLimit) {
         console.log('  -> Destination proximity mismatch');
         continue;
+      }
+
+      // 5.5 Check directionality (passenger must travel in the same direction as the driver)
+      if (pickupProjection.param > destProjection.param + 0.05) {
+         console.log('  -> Direction mismatch (passenger traveling backwards)');
+         continue;
       }
 
       // 6. Check time window (default to 24 hours to cover any same-day commute)
@@ -332,7 +351,43 @@ export class RidesService {
         Math.sin(deltaLambda / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-    return R * c;
+    return R * c; // Distance in meters
+  }
+
+  /**
+   * Project a point onto a line segment and return the distance in meters and the projection parameter [0, 1].
+   * This is used to check if a passenger's pickup/destination is along the driver's route.
+   */
+  private projectPointToLineSegment(
+    ptLat: number, ptLng: number,
+    startLat: number, startLng: number,
+    endLat: number, endLng: number
+  ) {
+    const x = ptLng, y = ptLat;
+    const x1 = startLng, y1 = startLat;
+    const x2 = endLng, y2 = endLat;
+
+    const C = x2 - x1;
+    const D = y2 - y1;
+    const len_sq = C * C + D * D;
+    
+    let param = 0;
+    if (len_sq !== 0) {
+      param = ((x - x1) * C + (y - y1) * D) / len_sq;
+    }
+
+    // Clamp param to [0, 1] for the line segment bounds
+    const clampedParam = Math.max(0, Math.min(1, param));
+    const xx = x1 + clampedParam * C;
+    const yy = y1 + clampedParam * D;
+
+    const dx = x - xx;
+    const dy = y - yy;
+    
+    // Distance in degrees converted to meters (approx 111km per degree)
+    const distanceMeters = Math.sqrt(dx * dx + dy * dy) * 111000;
+    
+    return { distance: distanceMeters, param };
   }
 
   /**
