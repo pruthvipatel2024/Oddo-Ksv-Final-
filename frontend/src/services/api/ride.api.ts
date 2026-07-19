@@ -60,6 +60,9 @@ export const ridesApi = {
   findOne: (id: string) => 
     apiClient.get<{ success: boolean; data: any }>(`/rides/${id}`),
 
+  findMyOffers: () => 
+    apiClient.get<{ success: boolean; data: any[] }>('/rides/driver/my-offers'),
+
   cancel: (id: string) => 
     apiClient.delete<{ success: boolean; data: any }>(`/rides/${id}`),
 };

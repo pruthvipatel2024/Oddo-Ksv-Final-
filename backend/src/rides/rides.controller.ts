@@ -80,10 +80,28 @@ export class RidesController {
     description: 'Search results are globally matched across the marketplace.',
   })
   @ApiResponse({ status: 200, description: 'Return array of matched rides.' })
-  async search(@Query() query: SearchRideDto) {
+  async search(
+    @CurrentUser() passenger: JwtPayload,
+    @Query() query: SearchRideDto,
+  ) {
     return {
       success: true,
-      data: await this.ridesService.search(query),
+      data: await this.ridesService.search(passenger.organizationId!, query),
+    };
+  }
+
+  @Get('driver/my-offers')
+  @Roles(UserRole.EMPLOYEE)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'List my offered rides',
+    description: 'Returns all rides published by the logged-in driver.',
+  })
+  @ApiResponse({ status: 200, description: 'Return array of offered rides.' })
+  async findMyOffers(@CurrentUser() driver: JwtPayload) {
+    return {
+      success: true,
+      data: await this.ridesService.findByDriver(driver.sub),
     };
   }
 

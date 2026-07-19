@@ -10,15 +10,26 @@ export class RidesRepository extends BaseRepository<Ride> {
   }
 
   /**
-   * Find global rides matching travel date and status.
+   * Find global rides matching travel date, organization, and status.
    */
   async findMatchingRides(
+    organizationId: string,
     date: Date,
     status: RideStatus = RideStatus.OPEN,
   ): Promise<any[]> {
+    const startOfDay = new Date(date);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(date);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
     return this.prisma.ride.findMany({
       where: {
-        date,
+        organizationId,
+        date: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
         status,
       },
       include: {
@@ -79,6 +90,37 @@ export class RidesRepository extends BaseRepository<Ride> {
             },
           },
         },
+      },
+    });
+  }
+
+  /**
+   * Find all rides published by a specific driver, including vehicle and passenger bookings.
+   */
+  async findByDriverId(driverId: string): Promise<any[]> {
+    return this.prisma.ride.findMany({
+      where: {
+        driverId,
+      },
+      include: {
+        vehicle: true,
+        bookings: {
+          include: {
+            passenger: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                phone: true,
+                avatar: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        date: 'desc',
       },
     });
   }

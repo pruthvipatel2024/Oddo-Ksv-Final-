@@ -21,6 +21,15 @@ export function useRides() {
     },
   });
 
+  // Query: Get offered rides by current driver
+  const myOffersQuery = useQuery({
+    queryKey: ['my-offers'],
+    queryFn: async () => {
+      const res = await ridesApi.findMyOffers() as any;
+      return res.data || [];
+    },
+  });
+
   // Mutation: Publish a new ride offer
   const createRideMutation = useMutation({
     mutationFn: async (payload: CreateRidePayload) => {
@@ -29,6 +38,7 @@ export function useRides() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employee-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['my-offers'] });
     },
   });
 
@@ -40,6 +50,18 @@ export function useRides() {
     },
   });
 
+  // Mutation: Cancel/delete offered ride
+  const cancelRideMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await ridesApi.cancel(id);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-offers'] });
+      queryClient.invalidateQueries({ queryKey: ['employee-dashboard'] });
+    },
+  });
+
   return {
     confirmRoute: confirmRouteMutation.mutateAsync,
     isConfirmingRoute: confirmRouteMutation.isPending,
@@ -48,5 +70,9 @@ export function useRides() {
     searchRides: searchRidesMutation.mutateAsync,
     isSearching: searchRidesMutation.isPending,
     searchedRides: searchRidesMutation.data || [],
+    myOffers: myOffersQuery.data || [],
+    isLoadingOffers: myOffersQuery.isLoading,
+    cancelRide: cancelRideMutation.mutateAsync,
+    isCancelling: cancelRideMutation.isPending,
   };
 }

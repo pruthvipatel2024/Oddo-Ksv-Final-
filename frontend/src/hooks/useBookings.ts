@@ -38,6 +38,8 @@ export function useBookings() {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
       queryClient.invalidateQueries({ queryKey: ['employee-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['my-offers'] });
+      queryClient.invalidateQueries({ queryKey: ['trips'] });
     },
   });
 

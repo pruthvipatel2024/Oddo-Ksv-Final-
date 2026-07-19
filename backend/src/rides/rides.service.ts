@@ -140,13 +140,14 @@ export class RidesService {
   }
 
   /**
-   * Search and match rides globally across the marketplace.
+   * Search and match rides globally across the marketplace, isolated by passenger organization.
    */
-  async search(dto: SearchRideDto): Promise<any[]> {
+  async search(organizationId: string, dto: SearchRideDto): Promise<any[]> {
     const travelDate = new Date(dto.date);
 
-    // Fetch all open rides on that date globally
+    // Fetch all open rides on that date globally, scoped to the passenger's org
     const openRides = await this.ridesRepository.findMatchingRides(
+      organizationId,
       travelDate,
       RideStatus.OPEN,
     );
@@ -299,5 +300,12 @@ export class RidesService {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c;
+  }
+
+  /**
+   * Find all rides published by a specific driver, including associated vehicle and bookings.
+   */
+  async findByDriver(driverId: string): Promise<any[]> {
+    return this.ridesRepository.findByDriverId(driverId);
   }
 }
