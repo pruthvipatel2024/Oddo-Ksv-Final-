@@ -120,7 +120,6 @@ export class BookingsService {
       // Create Payment in ESCROWED state
       await tx.payment.create({
         data: {
-          tripId: undefined, // Will be linked when the Trip is actually created
           bookingId: booking.id,
           payerId: passengerId,
           amount: fare,
