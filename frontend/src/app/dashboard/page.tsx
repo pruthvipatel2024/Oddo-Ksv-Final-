@@ -10,12 +10,17 @@ import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/ui/icons";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useRides } from "@/hooks/useRides";
+import { useSession } from "@/context/SessionContext";
 import { nominatimService, GeocodingResult } from "@/services/maps/nominatim.service";
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { user } = useSession();
   const { vehicles, isLoading: isLoadingVehicles } = useVehicles();
   const { createRide, isCreating } = useRides();
+
+  // Filter vehicles to show only those owned by the current logged-in employee
+  const myVehicles = vehicles.filter((v) => v.ownerId === user?.id);
 
   const [mode, setMode] = useState<"find" | "offer">("find");
   const [start, setStart] = useState("");
@@ -78,10 +83,10 @@ export default function DashboardPage() {
 
   // Sync selected vehicle
   useEffect(() => {
-    if (vehicles && vehicles.length > 0 && !selectedVehicleId) {
-      setSelectedVehicleId(vehicles[0].id);
+    if (myVehicles && myVehicles.length > 0 && !selectedVehicleId) {
+      setSelectedVehicleId(myVehicles[0].id);
     }
-  }, [vehicles, selectedVehicleId]);
+  }, [myVehicles, selectedVehicleId]);
 
   const handleSwap = () => {
     setSwapping(true);
@@ -296,7 +301,7 @@ export default function DashboardPage() {
                   <span className="mb-1.5 block text-sm font-medium text-ink-600 dark:text-ink-300">Select Vehicle</span>
                   {isLoadingVehicles ? (
                     <div className="text-xs text-ink-400">Loading vehicles...</div>
-                  ) : vehicles.length === 0 ? (
+                  ) : myVehicles.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-red-200 bg-red-50/20 p-3 text-xs text-red-650 dark:border-red-900/30 dark:text-red-400">
                       You must register a vehicle first.{" "}
                       <Link href="/my-vehicle" className="font-bold underline hover:text-red-500">
@@ -309,7 +314,7 @@ export default function DashboardPage() {
                       onChange={(e) => setSelectedVehicleId(e.target.value)}
                       className="w-full rounded-xl border border-ink-200 bg-white px-3.5 py-2.5 text-sm text-ink-800 outline-none focus:border-teal-500 dark:border-ink-700 dark:bg-ink-800 dark:text-ink-100"
                     >
-                      {vehicles.map((v) => (
+                      {myVehicles.map((v) => (
                         <option key={v.id} value={v.id}>
                           {v.model} ({v.registrationNumber})
                         </option>
@@ -324,7 +329,7 @@ export default function DashboardPage() {
               type="submit"
               size="lg"
               className="mt-2 w-full"
-              disabled={isCreating || (mode === "offer" && vehicles.length === 0)}
+              disabled={isCreating || (mode === "offer" && myVehicles.length === 0)}
             >
               {isCreating ? "Publishing..." : mode === "find" ? "Find Ride" : "Publish Ride"}
             </Button>
