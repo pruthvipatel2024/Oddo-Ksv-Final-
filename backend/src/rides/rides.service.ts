@@ -284,13 +284,23 @@ export class RidesService {
           pickupDistance,
           destDistance,
           totalDetour: pickupDistance + destDistance,
+          timeDifference: timeDiff,
           driverRating,
         },
       });
     }
 
-    // Sort by best match (lowest total detour distance, then highest driver rating, then lowest price)
+    // Sort by best match: 
+    // 1. Closest time difference (prioritize rides matching the exact requested time)
+    // 2. Lowest total detour distance
+    // 3. Highest driver rating
+    // 4. Lowest price
     matches.sort((a, b) => {
+      // Sort by time difference (ascending)
+      const timeDiff = a.metrics.timeDifference - b.metrics.timeDifference;
+      if (timeDiff !== 0) return timeDiff;
+
+      // Sort by detour distance (ascending)
       const detourDiff = a.metrics.totalDetour - b.metrics.totalDetour;
       if (detourDiff !== 0) return detourDiff;
 
