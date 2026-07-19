@@ -152,6 +152,18 @@ export class RidesService {
       RideStatus.OPEN,
     );
 
+    // Helper to extract calendar day string YYYY-MM-DD in IST (+5:30 offset)
+    const toLocalDateString = (d: Date) => {
+      const offsetMs = 5.5 * 60 * 60 * 1000;
+      const localDate = new Date(d.getTime() + offsetMs);
+      const year = localDate.getUTCFullYear();
+      const month = String(localDate.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(localDate.getUTCDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const searchDayStr = toLocalDateString(travelDate);
+
     // Compute target departure total minutes from midnight
     const searchDateTime = new Date(dto.date);
     const searchHours = searchDateTime.getUTCHours();
@@ -161,6 +173,12 @@ export class RidesService {
     const matches: any[] = [];
 
     for (const ride of openRides) {
+      // 0. Verify matching calendar day in local time offset (IST)
+      const rideDayStr = toLocalDateString(new Date(ride.date));
+      if (searchDayStr !== rideDayStr) {
+        continue;
+      }
+
       // 1. Check seat availability
       const seatsNeeded = dto.seatsNeeded || 1;
       if (ride.availableSeats < seatsNeeded) {
@@ -208,12 +226,12 @@ export class RidesService {
         continue;
       }
 
-      // 6. Check time window
+      // 6. Check time window (default to 24 hours to cover any same-day commute)
       const [rideH, rideM] = ride.time.split(':').map(Number);
       const rideMinutesTotal = rideH * 60 + rideM;
       const timeDiff = Math.abs(rideMinutesTotal - searchMinutesTotal);
 
-      if (timeDiff > (dto.timeWindowMinutes ?? 30)) {
+      if (timeDiff > (dto.timeWindowMinutes ?? 1440)) {
         continue;
       }
 

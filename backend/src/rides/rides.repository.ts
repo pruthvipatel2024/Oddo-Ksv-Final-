@@ -17,18 +17,15 @@ export class RidesRepository extends BaseRepository<Ride> {
     date: Date,
     status: RideStatus = RideStatus.OPEN,
   ): Promise<any[]> {
-    const startOfDay = new Date(date);
-    startOfDay.setUTCHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(date);
-    endOfDay.setUTCHours(23, 59, 59, 999);
+    const startRange = new Date(date.getTime() - 24 * 60 * 60 * 1000);
+    const endRange = new Date(date.getTime() + 24 * 60 * 60 * 1000);
 
     return this.prisma.ride.findMany({
       where: {
         organizationId,
         date: {
-          gte: startOfDay,
-          lte: endOfDay,
+          gte: startRange,
+          lte: endRange,
         },
         status,
       },
