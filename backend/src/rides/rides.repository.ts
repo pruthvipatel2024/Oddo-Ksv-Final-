@@ -22,7 +22,6 @@ export class RidesRepository extends BaseRepository<Ride> {
 
     return this.prisma.ride.findMany({
       where: {
-        organizationId,
         date: {
           gte: startRange,
           lte: endRange,
