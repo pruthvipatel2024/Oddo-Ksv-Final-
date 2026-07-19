@@ -223,7 +223,7 @@ export class RidesService {
       
       // Minimum of exact distance or distance to the line segment
       const pickupDistance = Math.min(pickupProjection.distance, exactPickupDistance);
-      const pickupRadiusLimit = dto.pickupRadius ?? 5000; // Increased to 5km for practical detour matching
+      const pickupRadiusLimit = dto.pickupRadius ?? 20000; // Increased to 20km for realistic intercity detours
       
       console.log(`  - pickupDistance: ${pickupDistance}, limit: ${pickupRadiusLimit}`);
       if (pickupDistance > pickupRadiusLimit) {
@@ -244,7 +244,7 @@ export class RidesService {
       );
       
       const destDistance = Math.min(destProjection.distance, exactDestDistance);
-      const destRadiusLimit = dto.destinationRadius ?? 5000;
+      const destRadiusLimit = dto.destinationRadius ?? 20000;
 
       console.log(`  - destDistance: ${destDistance}, limit: ${destRadiusLimit}`);
       if (destDistance > destRadiusLimit) {
