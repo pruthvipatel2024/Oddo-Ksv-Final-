@@ -120,7 +120,7 @@ export class BookingsService {
       // Create Payment in ESCROWED state
       await tx.payment.create({
         data: {
-          tripId: '00000000-0000-0000-0000-000000000000', // Mock UUID, updated once Trip is created
+          tripId: undefined, // Will be linked when the Trip is actually created
           bookingId: booking.id,
           payerId: passengerId,
           amount: fare,

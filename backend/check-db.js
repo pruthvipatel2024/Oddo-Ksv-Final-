@@ -1,8 +1,22 @@
-const { Client } = require('pg');
-const client = new Client({ connectionString: 'postgresql://neondb_owner:npg_C7OZsVWS5zbm@ep-summer-water-az5jqdx8-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require' });
+const axios = require('axios');
 (async () => {
-  await client.connect();
-  const res = await client.query('SELECT email, "organizationId", "lastLogin" FROM "User" ORDER BY "lastLogin" DESC NULLS LAST LIMIT 5');
-  console.log(res.rows);
-  await client.end();
+  try {
+    const loginRes = await axios.post('http://localhost:5000/api/v1/auth/login', {
+      email: 'shivam@gmail.com',
+      password: 'password123'
+    });
+    const token = loginRes.data.data.accessToken;
+
+    console.log('Attempting booking...');
+    const bookRes = await axios.post('http://localhost:5000/api/v1/bookings', {
+      rideId: 'e5e65f12-3758-49a3-ac41-0a942e896cf0',
+      seatsBooked: 1
+    }, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    
+    console.log('Success:', bookRes.data);
+  } catch (error) {
+    console.error('API Error:', error.response ? error.response.data : error.message);
+  }
 })();
