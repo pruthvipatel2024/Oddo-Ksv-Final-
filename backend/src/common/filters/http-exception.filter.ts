@@ -46,7 +46,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
           ? exception.message
           : JSON.stringify(exception)
       }`,
-      exception instanceof Error ? exception.stack : undefined,
+      exception instanceof Error && status >= 500 ? exception.stack : undefined,
     );
 
     response.status(status).json({
